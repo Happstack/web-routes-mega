@@ -1,66 +1,64 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 module Main where
 
 import Control.Concurrent
 import Control.Monad.Reader
+import Control.Monad.Consumer
+import Data.List
 import HAppS.Server
 import Text.XHtml hiding (method,dir)
 import URLT
 import Network.URI
+import Data.Generics
+import Data.Tree
 
+-- * HAppS Handler
 
-impl :: [ServerPartT IO String]
-impl = [ anyRequest $ ok "hello, world" ]    
+-- handleURL :: (Data url, Monad m, Read url, Show url) => (url -> URLT url (WebT m) a) -> url -> String -> WebT m a
 
-data SimpleSite
-    = HomePage
-    | MyGallery Gallery
-      deriving (Read, Show)
-
-simpleSite :: (Monad m) => SimpleSite -> URLT SimpleSite m Html
-simpleSite HomePage =
-    do gallery <- nestURL MyGallery $ showURL Thumbnails
-       return $ defPage (toHtml "go to " +++
-                         (anchor (toHtml "my gallery")) ! [href gallery ] )
-simpleSite (MyGallery g) =
-    nestURL MyGallery $ gallery "Jeremy" g
-
-data Gallery
-    = Thumbnails 
-    | ShowImage Int
-    deriving (Read, Show)
-
-gallery :: (Monad m) => String -> Gallery -> URLT Gallery m Html
-gallery name Thumbnails = 
-    do img1 <- showURL (ShowImage 1)
-       return $ defPage ((toHtml $ "showing " ++ name ++ "'s gallery thumbnails.") +++
-                         (anchor (toHtml "image 1") ! [href img1]))
-gallery name (ShowImage i) = return $ defPage (toHtml $ "showing " ++ name ++ "'s image number " ++ show i)
-
-{-
-runSite :: (Read url, Show url) => (url -> URLT url (CGIT IO) Html) -> url -> IO ()
-runSite site defaultUrl =
-    runCGI $ do queryStr <- liftM (fromMaybe "")  $ getVar "QUERY_STRING"
-                scriptName <- liftM fromJust $ getVar "SCRIPT_NAME"
-                html <- handleURL scriptName site defaultUrl queryStr
-                output (renderHtml html)
--}
--- handleURL :: (Read url, Show url) => (url -> URLT url m Html) -> url -> String -> m Html
-handleURL site defaultUrl queryStr =
+handleURL :: (Monad m, Data url) => (url -> ReaderT (url -> String) m a) -> url -> String -> m a
+handleURL site defaultUrl path =
     do req <-
-            case reads (decode queryStr) of
-              [(url,"")] -> return url
-              _ -> return defaultUrl
-       runReaderT (site req) (("?" ++) . show)
-    where
-      decode = unEscapeString . dropQ
-      dropQ ('/':'?':rest) = rest
-      dropQ o = o
+            case path of
+              "/" -> return defaultUrl
+              _ -> case urlRead path of
+                     Nothing -> fail "could not parse url"
+                     (Just url) -> return url
+       runReaderT (site req) urlShow
 
-implURL :: [ServerPartT IO Response ]
-implURL =
-    [ uriRest $ \str ->
-      method GET $ ok . toResponse =<< handleURL simpleSite HomePage str
-    ] ++ catchAll
+urlShow :: Data a => a -> String
+urlShow t =
+    let args = gmapQ urlShow t
+    in encode $
+    "/" ++ (replicate (length args) '!') 
+        ++ showConstr (toConstr t)
+        ++ concat args
+    where
+      encode = escapeURIString isUnescapedInURI
+
+urlRead :: Data a => String -> Maybe a
+urlRead str =
+    rewrite str
+    where
+      rewrite s = 
+          case gread $ toParens (evalConsumer (map args (words (map toSpace (decode s)))) toTree) of
+            [(v, "")] -> Just v
+            _ -> Nothing
+      toSpace '/' = ' '
+      toSpace o = o
+      args str = 
+          let (pluses, rest) = span (== '!') str
+          in (length pluses, rest)
+      toTree :: Consumer (Int, String) (Tree String)
+      toTree = 
+          do Just (argCount, constr) <- next
+             args <- replicateM argCount toTree
+             return $ Node constr args
+      toParens (Node constr args) =
+          "(" ++ constr ++ (concatMap ((" " ++) . toParens) args) ++ ")"
+      decode = unEscapeString
+
+-- * Extra
 
 catchAll = 
     [ withRequest $ \rq -> notFound ( (toResponse (prettyRequest rq)))
@@ -86,6 +84,52 @@ catchAll =
                      ) 
                     )
 
+-- * Example
+
+data SimpleSite
+    = HomePage
+    | MyGallery Gallery
+      deriving (Read, Show, Data, Typeable, Eq)
+
+simpleSite :: (Monad m) => SimpleSite -> URLT SimpleSite m Html
+simpleSite HomePage =
+    do gallery <- nestURL MyGallery $ showURL Thumbnails
+       return $ defPage (toHtml "go to " +++
+                         (anchor (toHtml "my gallery")) ! [href gallery ] )
+simpleSite (MyGallery g) =
+    nestURL MyGallery $ gallery "Jeremy" g
+
+data Gallery
+    = Thumbnails 
+    | ShowImage Int Size
+    deriving (Read, Show, Data, Typeable, Eq)
+
+data Size
+    = Full
+    | Screen
+    deriving (Read, Show, Data, Typeable, Eq)
+
+gallery :: (Monad m) => String -> Gallery -> URLT Gallery m Html
+gallery name Thumbnails = 
+    do img1 <- showURL (ShowImage 1 Full)
+       return $ defPage ((toHtml $ "showing " ++ name ++ "'s gallery thumbnails.") +++
+                         (anchor (toHtml "image 1") ! [href img1]))
+gallery name (ShowImage i s) = return $ defPage (toHtml $ "showing " ++ name ++ "'s image number " ++ show i ++ " at " ++ show s ++ " size.")
+
+{-
+runSite :: (Read url, Show url) => (url -> URLT url (CGIT IO) Html) -> url -> IO ()
+runSite site defaultUrl =
+    runCGI $ do queryStr <- liftM (fromMaybe "")  $ getVar "QUERY_STRING"
+                scriptName <- liftM fromJust $ getVar "SCRIPT_NAME"
+                html <- handleURL scriptName site defaultUrl queryStr
+                output (renderHtml html)
+-}
+
+implURL :: [ServerPartT IO Response]
+implURL =
+    [ withRequest $ \rq ->
+      return . toResponse =<< (lift (print (rqPaths rq)) >> handleURL simpleSite HomePage ("/" ++ concat (intersperse "/" (rqPaths rq))))
+    ] ++ catchAll
 
 -- default page layout function
 defPage :: Html -> Html
@@ -95,9 +139,10 @@ defPage thebody =
       (thelink ! [href "./simplesite.css", rel "stylesheet", thetype "text/css"] << noHtml)) +++
      (body thebody))
 
-main = do -- control <- startSystemState entryPoint
-          tid <- forkIO $ simpleHTTP nullConf implURL
-          putStrLn "running..."
-          waitForTermination
-          killThread tid
-          -- shutdownSystem control
+main = 
+    do -- control <- startSystemState entryPoint
+       tid <- forkIO $ simpleHTTP nullConf implURL
+       putStrLn "running..."
+       waitForTermination
+       killThread tid
+       -- shutdownSystem control
