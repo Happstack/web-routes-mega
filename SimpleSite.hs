@@ -11,7 +11,7 @@ import Network.URI
 
 -- Third Party Modules
 
-import Network.CGI
+import Network.CGI hiding (Html)
 import Text.XHtml
 
 

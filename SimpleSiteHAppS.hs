@@ -1,9 +1,9 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, FlexibleContexts #-}
 module Main where
 
 import Control.Concurrent
 import Control.Monad.Reader
-import Control.Monad.Consumer
+import Control.Monad.State
 import Data.List
 import HAppS.Server
 import Text.XHtml hiding (method,dir)
@@ -13,8 +13,6 @@ import Data.Generics
 import Data.Tree
 
 -- * HAppS Handler
-
--- handleURL :: (Data url, Monad m, Read url, Show url) => (url -> URLT url (WebT m) a) -> url -> String -> WebT m a
 
 handleURL :: (Monad m, Data url) => (url -> ReaderT (url -> String) m a) -> url -> String -> m a
 handleURL site defaultUrl path =
@@ -41,7 +39,7 @@ urlRead str =
     rewrite str
     where
       rewrite s = 
-          case gread $ toParens (evalConsumer (map args (words (map toSpace (decode s)))) toTree) of
+          case gread $ toParens (evalState toTree (map args (words (map toSpace (decode s)))) ) of
             [(v, "")] -> Just v
             _ -> Nothing
       toSpace '/' = ' '
@@ -49,14 +47,20 @@ urlRead str =
       args str = 
           let (pluses, rest) = span (== '!') str
           in (length pluses, rest)
-      toTree :: Consumer (Int, String) (Tree String)
+      toTree :: State [(Int, String)] (Tree String)
       toTree = 
-          do Just (argCount, constr) <- next
+          do (argCount, constr) <- next
              args <- replicateM argCount toTree
              return $ Node constr args
       toParens (Node constr args) =
           "(" ++ constr ++ (concatMap ((" " ++) . toParens) args) ++ ")"
       decode = unEscapeString
+      next :: (MonadState [s] m) => m s
+      next = 
+          do (x:xs) <- get
+             put xs
+             return x
+             
 
 -- * Extra
 
@@ -115,15 +119,6 @@ gallery name Thumbnails =
        return $ defPage ((toHtml $ "showing " ++ name ++ "'s gallery thumbnails.") +++
                          (anchor (toHtml "image 1") ! [href img1]))
 gallery name (ShowImage i s) = return $ defPage (toHtml $ "showing " ++ name ++ "'s image number " ++ show i ++ " at " ++ show s ++ " size.")
-
-{-
-runSite :: (Read url, Show url) => (url -> URLT url (CGIT IO) Html) -> url -> IO ()
-runSite site defaultUrl =
-    runCGI $ do queryStr <- liftM (fromMaybe "")  $ getVar "QUERY_STRING"
-                scriptName <- liftM fromJust $ getVar "SCRIPT_NAME"
-                html <- handleURL scriptName site defaultUrl queryStr
-                output (renderHtml html)
--}
 
 implURL :: [ServerPartT IO Response]
 implURL =
