@@ -92,15 +92,21 @@ catchAll =
 data SimpleSite
     = HomePage
     | MyGallery Gallery
+    | YourGallery Gallery
       deriving (Read, Show, Data, Typeable, Eq)
 
 simpleSite :: (Monad m) => SimpleSite -> URLT SimpleSite m Html
 simpleSite HomePage =
-    do gallery <- nestURL MyGallery $ showURL Thumbnails
-       return $ defPage (toHtml "go to " +++
-                         (anchor (toHtml "my gallery")) ! [href gallery ] )
+    do myGallery <- nestURL MyGallery $ showURL Thumbnails
+       yourGallery <- nestURL YourGallery $ showURL Thumbnails
+       return $ defPage (toHtml "go to " +++ br +++
+                         (anchor (toHtml "my gallery")) ! [href myGallery ]  +++ br +++
+                         (anchor (toHtml "your gallery")) ! [href yourGallery ] 
+                        )
 simpleSite (MyGallery g) =
     nestURL MyGallery $ gallery "Jeremy" g
+simpleSite (YourGallery g) =
+    nestURL YourGallery $ gallery "Someone Else" g
 
 data Gallery
     = Thumbnails 
@@ -122,7 +128,7 @@ gallery name (ShowImage i s) = return $ defPage (toHtml $ "showing " ++ name ++ 
 implURL :: [ServerPartT IO Response]
 implURL =
     [ withRequest $ \rq ->
-      return . toResponse =<< (lift (print (rqPaths rq)) >> handleURL simpleSite HomePage ("/" ++ concat (intersperse "/" (rqPaths rq))))
+      return . toResponse =<< handleURL simpleSite HomePage ("/" ++ concat (intersperse "/" (rqPaths rq)))
     ] ++ catchAll
 
 -- default page layout function
