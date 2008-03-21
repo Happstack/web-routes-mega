@@ -60,7 +60,6 @@ urlRead str =
           do (x:xs) <- get
              put xs
              return x
-             
 
 -- * Extra
 
@@ -130,8 +129,8 @@ implURL =
 defPage :: Html -> Html
 defPage thebody =
     ((header 
-      (thetitle (toHtml "Simple Site")) +++
-      (thelink ! [href "./simplesite.css", rel "stylesheet", thetype "text/css"] << noHtml)) +++
+      (thetitle (toHtml "Simple Site")) {- +++
+      (thelink ! [href "./simplesite.css", rel "stylesheet", thetype "text/css"] << noHtml)-} ) +++
      (body thebody))
 
 main = 
