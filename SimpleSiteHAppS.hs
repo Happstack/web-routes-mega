@@ -14,7 +14,7 @@ import Data.Tree
 
 -- * HAppS Handler
 
-handleURL :: (Monad m, Data url) => (url -> ReaderT (url -> String) m a) -> url -> String -> m a
+handleURL :: (Monad m, Data url) => (url -> URLT url m a) -> url -> String -> m a
 handleURL site defaultUrl path =
     do req <-
             case path of
@@ -24,7 +24,7 @@ handleURL site defaultUrl path =
                      (Just url) -> return url
        runReaderT (site req) urlShow
 
-urlShow :: Data a => a -> String
+urlShow :: Data a => a -> Link
 urlShow t =
     let args = gmapQ urlShow t
     in encode $
@@ -34,7 +34,7 @@ urlShow t =
     where
       encode = escapeURIString isUnescapedInURI
 
-urlRead :: Data a => String -> Maybe a
+urlRead :: Data a => Link -> Maybe a
 urlRead str =
     rewrite str
     where

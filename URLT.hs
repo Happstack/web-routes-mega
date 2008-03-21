@@ -18,6 +18,3 @@ showURL url =
 
 nestURL :: (Monad m) => (url2 -> url1) -> ReaderT (url2 -> Link) m a -> ReaderT (url1 -> Link) m a
 nestURL b = withReaderT (. b)
-
-
-
