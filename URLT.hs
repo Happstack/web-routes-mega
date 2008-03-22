@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -fglasgow-exts #-}
+{-# LANGUAGE FlexibleContexts #-}
 module URLT where
 
 -- Standard GHC Modules
@@ -11,10 +11,10 @@ import Data.Maybe
 type Link = String
 type URLT url = ReaderT  (url -> Link)
 
-showURL :: (MonadReader ((->) url Link) m) => url -> m Link
+showURL :: (Monad m) => url -> URLT url m Link
 showURL url =
     do showF <- ask
        return (showF url)
 
-nestURL :: (Monad m) => (url2 -> url1) -> ReaderT (url2 -> Link) m a -> ReaderT (url1 -> Link) m a
+nestURL :: (Monad m) => (url2 -> url1) -> URLT url2 m a -> URLT url1 m a
 nestURL b = withReaderT (. b)

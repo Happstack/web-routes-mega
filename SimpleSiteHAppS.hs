@@ -44,8 +44,8 @@ urlRead str =
             _ -> Nothing
       toSpace '/' = ' '
       toSpace o = o
-      args str = 
-          let (pluses, rest) = span (== '!') str
+      args argStr =
+          let (pluses, rest) = span (== '!') argStr
           in (length pluses, rest)
       toTree :: State [(Int, String)] (Tree String)
       toTree = 
@@ -119,11 +119,14 @@ data Size
     deriving (Read, Show, Data, Typeable, Eq)
 
 gallery :: (Monad m) => String -> Gallery -> URLT Gallery m Html
-gallery name Thumbnails = 
+gallery username Thumbnails = 
     do img1 <- showURL (ShowImage 1 Full)
-       return $ defPage ((toHtml $ "showing " ++ name ++ "'s gallery thumbnails.") +++
+       return $ defPage ((toHtml $ "Showing " ++ username ++ "'s gallery thumbnails.") +++ 
+                         br +++
                          (anchor (toHtml "image 1") ! [href img1]))
-gallery name (ShowImage i s) = return $ defPage (toHtml $ "showing " ++ name ++ "'s image number " ++ show i ++ " at " ++ show s ++ " size.")
+gallery username (ShowImage i s) = 
+    return $ defPage (toHtml $ "showing " ++ username ++ "'s image number " ++ 
+                             show i ++ " at " ++ show s ++ " size.")
 
 implURL :: [ServerPartT IO Response]
 implURL =
@@ -139,6 +142,7 @@ defPage thebody =
       (thelink ! [href "./simplesite.css", rel "stylesheet", thetype "text/css"] << noHtml)-} ) +++
      (body thebody))
 
+main :: IO ()
 main = 
     do -- control <- startSystemState entryPoint
        tid <- forkIO $ simpleHTTP nullConf implURL
