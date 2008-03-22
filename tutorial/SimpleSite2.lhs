@@ -141,7 +141,7 @@ Failed, modules loaded: none.</pre>
  <code>nestLink YourGallery</code>. The <code>gallery</code> library
  itself needs no additional adjustments.</p>
 
- <p>Additionally, let's say we forgot the nestLink
+ <p>Additionally, let's say we forgegt the nestLink
  in the last alternative and instead write:</p>
 
  <pre>ourSite (YourGallery g) =
