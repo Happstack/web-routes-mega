@@ -1,3 +1,20 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+<title>404 No More!, Part I</title>
+<link type='text/css' rel='stylesheet' href='hscolour.css' />
+</head>
+<body>
+
+<h1>404 No More!</h1> 
+ <p>This post shows a simple way to use the Reader Monad Transformer to:</p>
+    <ol>
+     <li>Ensure that all the internal links in your web app are valid.</li>
+     <li>Ensure that when a component is used multiple times, each instance gets a unique set of URLs.</li>
+    </ol>
+      
+First some header stuff.
+
 > {-# LANGUAGE DeriveDataTypeable, FlexibleContexts #-}
 > module Main where
 
@@ -7,14 +24,6 @@
 > import HAppS.Server hiding (method, dir)
 > import Text.XHtml
 > import Network.URI
-
-<h1>404 No More!</h1> 
- <p>This post shows a simple way to use the Reader Monad Transformer to:</p>
-    <ol>
-     <li>Ensure that all the internal links in your web app are valid.</li>
-     <li>Ensure that when a component is used multiple times, each instance gets a unique set of URLs.</li>
-    </ol>
-      
 
  <h2>An Obvious Start</h2>
     <p>The first step is to present the links as data types in the
