@@ -12,6 +12,12 @@
      <li>Ensure that all the internal links in your web app are valid.</li>
      <li>Ensure that when a component is used multiple times, each instance gets a unique set of URLs.</li>
     </ol>
+
+ <p>The core code is mind-numbingly simple -- one type signature and
+ two one-liner functions. In fact, it is so simple looking, it will
+ take me three parts to explain why it is actually somewhat cool and
+ useful. Some familiarity with the Reader monad is useful but not
+ essential.</p>
       
 First some header stuff.
 
