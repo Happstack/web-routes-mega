@@ -18,6 +18,11 @@
  take me three parts to explain why it is actually somewhat cool and
  useful. Some familiarity with the Reader monad is useful but not
  essential.</p>
+
+ <p>I expect that the technique shown in this series is applicable to
+ other problems, but I am focusing on hyperlinks, because that is what
+ is immediately useful to me. If you think up some other pratical
+ uses, let me know and I will mention them.</p>
       
 First some header stuff.
 
