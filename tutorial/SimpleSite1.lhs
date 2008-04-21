@@ -7,6 +7,7 @@
 <body>
 
 <h1>404 No More!</h1> 
+ (<i><a href='./SimpleSite2.html'>Part II</a> and <a href='./SimpleSite3.html'>Part III</a></i>)
  <p>This post shows a simple way to use the Reader Monad Transformer to:</p>
     <ol>
      <li>Ensure that all the internal links in your web app are valid.</li>
@@ -144,7 +145,8 @@ non-unique. For example, imagine if we had a site like:
 >     | YourGallery Gallery
 >       deriving (Read, Show)
 
-In the next post we will see how to address these two issues.
+In the <a href="./SimpleSite2.html">next post</a> we will see how to
+Iaddress these two issues.
 
 <h2>The Rest Of This Example</h2>
 
@@ -190,3 +192,6 @@ adapted to use <code>Network.CGI</code>.
 >        putStrLn "running..."
 >        waitForTermination
 >        killThread tid
+
+</body>
+</html>

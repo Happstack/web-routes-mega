@@ -19,6 +19,7 @@ First some header stuff.
 > import Network.URI
 
 <h1>404 No More!, Part II</h1>
+ (<i><a href='./SimpleSite1.html'>Part I</a> and <a href='./SimpleSite3.html'>Part III</a></i>)
  <p>In the previous part, we ended with the following types:</p>
 
 
@@ -227,7 +228,7 @@ Failed, modules loaded: none.</pre>
 
  <h3>Next</h3>
 
- <p>In part III, we will make some small, final adjustments to
+ <p>In <a href="./SimpleSite3.html">part III</a>, we will make some small, final adjustments to
  make the library more usuable for real world projects</p>
 
 <h2>Remaining Boilerplate Code</h2>
@@ -274,3 +275,6 @@ The remaining code just wraps the example up into a working example.
 >        waitForTermination
 >        killThread tid
 >
+
+</body>
+</html>

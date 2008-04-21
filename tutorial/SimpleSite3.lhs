@@ -23,6 +23,7 @@ First some header stuff.
 > import Network.URI
 
 <h1>404 No More!, Part III</h1>
+ (<i><a href='./SimpleSite1.html'>Part I</a> and <a href='./SimpleSite2.html'>Part II</a></i>)
  <p>In this part, we will make some minor modifications to the
  <code>Link</code> monad so that it is more usuable in real world
  applications. These modifications include:</p>
@@ -72,6 +73,14 @@ First some header stuff.
  functions will generate and parsing links which look more like:</p>
 
  <code>http://localhost:8000/!MyGallery/!!ShowImage/1/Full</code>
+
+ <p>Unfortunately, the following code is quite broken and does not
+ play well with others. For example, if a link points to a .css file,
+ and the .css file references <code>image.png</code>, the browser will try to rewrite
+ the path replacing whatever comes after the last / with
+ <code>image.png.</code> So, consider this section a work in
+ progress. (In fact, consider everything in this series a work in
+ progress).
 
 > type Link = String
 
@@ -205,19 +214,22 @@ First some header stuff.
 > -- * Boilerplate code for running ourSite via HAppS. 
 > -- Easily adaptable to Network.CGI, etc.
 
-> implURL :: [ServerPartT IO Response]
-> implURL =
+> implURL :: (ToMessage a) => Site link Link (WebT IO) a -> [ServerPartT IO Response]
+> implURL siteSpec =
 >     [ withRequest $ \rq ->
 >           let link = (concat (intersperse "/" (rqPaths rq)))
 >           in
 >             do lift $ print link
->                return . toResponse =<< runSite ourSiteSpec link
+>                return . toResponse =<< runSite siteSpec link
 >     ]
 
 > main :: IO ()
 > main = 
->     do tid <- forkIO $ simpleHTTP nullConf implURL
+>     do tid <- forkIO $ simpleHTTP nullConf (implURL ourSiteSpec)
 >        putStrLn "running..."
 >        waitForTermination
 >        killThread tid
 >
+
+</body>
+</html>
