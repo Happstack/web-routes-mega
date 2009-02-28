@@ -129,6 +129,8 @@ First some header stuff.
  could be explicitly annotated in the data type you create to
  represent your site navigation.</p>
 
+ <p>link forwarding/migration</p>
+
  <h2>The rest of the example</h2>                      
 
  <p>We can now convert our example to use the new type.</p>
