@@ -6,13 +6,15 @@ import Language.Haskell.TH
 import Control.Monad.Consumer
 
 class AsURL a where
-    toURL :: a -> ShowS
+    toURLS :: a -> ShowS
     fromURLC :: Consumer String a
+
+toURL :: (AsURL a) => a -> String
+toURL u = toURLS u ""
 
 fromURL :: (AsURL a) => String -> a
 fromURL str = 
     fst $ runConsumer (words $ map (\c -> if c == '/' then ' ' else c) str) fromURLC
-
 
 deriveAsURL :: Name -> Q [Dec]
 deriveAsURL name
@@ -37,8 +39,8 @@ deriveAsURL name
                                   |  (conName, nArgs) <- cons ]
                    toURLWork :: String -> [Name] -> ExpQ
                    toURLWork conStr args
-                       = foldr1 (\ a b -> appE (appE [| (.) |] a) b) ([| ((++) conStr) |] : [ [| toURL $(varE arg) |] | arg <- args ])
-               funD 'toURL [clause [varP inp] (normalB body)  []]
+                       = foldr1 (\ a b -> appE (appE [| (.) |] a) b) ([| ((++) conStr) |] : [ [| toURLS $(varE arg) |] | arg <- args ])
+               funD 'toURLS [clause [varP inp] (normalB body)  []]
       fromURLCFn :: [(Name,Int)] -> DecQ
       fromURLCFn cons
           = do let body = 
@@ -76,3 +78,4 @@ parseInfo name
           conInfo (RecC n args) = (n, length args)
           conInfo (InfixC _ n _) = (n, 2)
           conInfo (ForallC _ _ con) = conInfo con
+

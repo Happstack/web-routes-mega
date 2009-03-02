@@ -1,18 +1,22 @@
-{-# OPTIONS_GHC -W -fglasgow-exts #-}
+{-# LANGUAGE TemplateHaskell, FlexibleContexts #-}
 module Main where
 
 -- Standard GHC Modules
 
+import Control.Applicative
 import Control.Monad.Reader
 import Data.Maybe
 import Data.Word
 import Network.URI
 
-
 -- Third Party Modules
 
+import Control.Monad.Consumer
 import Network.CGI hiding (Html)
 import Text.XHtml
+
+import URLTH
+import Happstack.Server
 
 
 -- * URLT Monad Transformer
@@ -66,6 +70,16 @@ systems, like WASH, Hope, HAppS, etc.
 
 -}
 
+-- default page layout function
+defPage :: Html -> Html
+defPage thebody =
+    ((header 
+      (thetitle (toHtml "Simple Site")) +++
+      (thelink ! [href "./simplesite.css", rel "stylesheet", thetype "text/css"] << noHtml)) +++
+     (body thebody))
+
+
+
 type Link = String
 type URLT url = ReaderT  (url -> Link)
 
@@ -93,28 +107,36 @@ nestURL b = withReaderT (. b)
 --
 -- This is where the 'url' gets turned into a string and back. You can
 -- do it however you want. I do it a pretty brain-dead way for this example.
-handleURL :: (Read url, Show url) => String -> (url -> URLT url m Html) -> url -> String -> m Html
-handleURL scriptName site defaultUrl queryStr =
+{-
+handleURL :: (AsURL url) => String -> (url -> URLT url m Html) -> url -> String -> m Html
+handleURL scriptName site defaultURL queryStr =
     let req =
-            case reads (decode queryStr) of
-              [(url,"")] -> url
-              _ -> defaultUrl
+            case (decode queryStr) of
+              "/" -> defaultURL
+              s   -> fromURL s
     in
-      runReaderT (site req) (((scriptName++"?")++) . encode . show)
+      runReaderT (site req) (((scriptName++"?")++) . encode . toURL)
     where encode = escapeURIString isUnreserved
           decode = unEscapeString
 
 -- |This function gets the CGI variable, invokes handleURL, and
 -- displays the final Html. It is not very exciting.
-runSite :: (Read url, Show url) => (url -> URLT url (CGIT IO) Html) -> url -> IO ()
-runSite site defaultUrl =
+runSiteCGI :: (AsURL url) => (url -> URLT url (CGIT IO) Html) -> url -> IO ()
+runSiteCGI site defaultUrl =
     runCGI $ do queryStr <- liftM (fromMaybe "")  $ getVar "QUERY_STRING"
                 scriptName <- liftM fromJust $ getVar "SCRIPT_NAME"
                 html <- handleURL scriptName site defaultUrl queryStr
                 output (renderHtml html)
-
-main :: IO ()
-main = runSite simpleSite HomePage
+-}
+runSiteHappstack :: (MonadIO m, AsURL url) => (url -> URLT url (ServerPartT m) Response) -> url -> ServerPartT m Response
+runSiteHappstack site defaultURL =
+    do queryStr <- rqUri <$> askRq
+       liftIO $ putStrLn queryStr
+       let url = 
+            case queryStr of
+              "/" -> defaultURL
+              s   -> fromURL s
+       runReaderT (site url) (('/' :) .toURL)
 
 -- * Photos Module
 
@@ -128,6 +150,8 @@ data Photos
     = RecentPhotos
     | PhotoView Word32
       deriving (Read, Show)
+
+$(deriveAsURL ''Photos)
 
 -- |PhotoConfig - configuration for a photo gallery. Currently just a
 -- title, but ultimately, it would include a reference to a database
@@ -158,6 +182,14 @@ data Blog
     | BlogView Word32
     | BlogPhotos Photos
       deriving (Read, Show)
+
+instance AsURL Word32 where
+    toURLS i = (show i ++)
+    fromURLC = 
+        do (Just s) <- next
+           return (read s)
+
+$(deriveAsURL ''Blog)
 
 blogPhotoConfig = PhotoConfig { photoGalleryTitle = "Blog Photos" }
 
@@ -193,29 +225,26 @@ data SimpleSite
     | PhotoGallery Photos
       deriving (Read, Show)
 
+$(deriveAsURL ''SimpleSite)
+
 mainPhotoGallery = PhotoConfig { photoGalleryTitle = "Main Photo Gallery" }
 
-simpleSite :: (Monad m) => SimpleSite -> URLT SimpleSite m Html
+simpleSite :: (Monad m) => SimpleSite -> URLT SimpleSite (ServerPartT m) Response
 -- Default homepage
 simpleSite HomePage =
     do blogs <- nestURL MyBlog $ blog RecentEntries
        photos <- nestURL PhotoGallery $ photos mainPhotoGallery RecentPhotos
-       return $ defPage (blogs +++ br +++ photos)
+       return $ toResponse $ defPage (blogs +++ br +++ photos)
 -- Process Blog request - note how it adds extra stuff to the bottom of the blog
 simpleSite (MyBlog b) =
     do body <- nestURL MyBlog $ blog b
-       return $ defPage (body +++
+       return $ toResponse $ defPage (body +++
                          p << toHtml "This could be adsense, or something else added by the top-level SimpleSite -- that the Blog module knows nothing about.")
 
 -- Process Photos request
 simpleSite (PhotoGallery p) =
     do body <- nestURL PhotoGallery $ photos mainPhotoGallery p
-       return $ defPage body
+       return $ toResponse $ defPage body
 
--- default page layout function
-defPage :: Html -> Html
-defPage thebody =
-    ((header 
-      (thetitle (toHtml "Simple Site")) +++
-      (thelink ! [href "./simplesite.css", rel "stylesheet", thetype "text/css"] << noHtml)) +++
-     (body thebody))
+main :: IO ()
+main = simpleHTTP nullConf $ runSiteHappstack simpleSite HomePage
