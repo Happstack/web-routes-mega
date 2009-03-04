@@ -90,7 +90,7 @@ that they generate prettier and more user friendly links.</p>
 >       readM str =
 >           case reads str of
 >             [(a,"")] -> Just a
->             o -> Nothing
+>             _ -> Nothing
 
 <p>Next we implement a function which will interpret the
 <code>Gallery</code> link and display the corresponding page:</p>
