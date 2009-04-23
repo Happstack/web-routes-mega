@@ -9,7 +9,7 @@ Description:      A collection of types and functions that ensure that URLs gene
 
 Exposed-Modules:  URLT, URLTH
                   
-Build-Depends:    base >= 4, mtl, Consumer
+Build-Depends:    base >= 4, mtl, Consumer, template-haskell
 
 Build-Type:       Simple
 Category:         Web, Language
