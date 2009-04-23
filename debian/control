@@ -7,7 +7,8 @@ Build-Depends: debhelper (>= 7.0),
                haskell-cdbs,
                cdbs,
                ghc6 (>= 6.8),
-               ghc6-prof
+               ghc6-prof,
+               libghc6-consumer-dev
 Build-Depends-Indep: ghc6-doc,
                      haddock
 Standards-Version: 3.8.1
