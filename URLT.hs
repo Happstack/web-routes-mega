@@ -1,10 +1,7 @@
-{-# LANGUAGE FlexibleContexts #-}
 module URLT where
 
--- Standard GHC Modules
-
-import Control.Monad.Reader
-import Data.Maybe
+import Control.Monad.Reader (MonadReader(ask), ReaderT, withReaderT)
+import URLT
 
 -- * URLT Monad Transformer
 
@@ -18,3 +15,8 @@ showURL url =
 
 nestURL :: (Monad m) => (url2 -> url1) -> URLT url2 m a -> URLT url1 m a
 nestURL b = withReaderT (. b)
+
+crossURL :: (Monad m) => (url2 -> url1) -> URLT url1 m (url2 -> Link)
+crossURL f = 
+    do showF <- ask
+       return $ \url2 -> showF (f url2)

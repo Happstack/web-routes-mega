@@ -10,12 +10,15 @@ class AsURL a where
     fromURLC :: Consumer String a
 
 toURL :: (AsURL a) => a -> String
-toURL u = toURLS u ""
+toURL u = '/' : toURLS u ""
 
 fromURL :: (AsURL a) => String -> a
 fromURL str = 
     fst $ runConsumer (words $ map (\c -> if c == '/' then ' ' else c) str) fromURLC
 
+-- FIXME: handle unexpected end of input
+-- FIXME: handle invalid input
+-- FIXME: handle when called with a type (not data, newtype)
 deriveAsURL :: Name -> Q [Dec]
 deriveAsURL name
     = do c <- parseInfo name
@@ -78,4 +81,3 @@ parseInfo name
           conInfo (RecC n args) = (n, length args)
           conInfo (InfixC _ n _) = (n, 2)
           conInfo (ForallC _ _ con) = conInfo con
-

@@ -9,9 +9,11 @@ Build-Depends: debhelper (>= 7.0),
                ghc6 (>= 6.8),
                ghc6-prof,
                haskell-consumer-doc,
-	       libghc6-consumer-prof
+	       libghc6-consumer-prof,
+               libghc6-happstack-server-prof
 Build-Depends-Indep: ghc6-doc,
-                     haddock
+                     haddock,
+                     hscolour
 Standards-Version: 3.8.1
 
 Package: libghc6-urlt-dev
