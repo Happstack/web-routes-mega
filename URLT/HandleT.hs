@@ -1,4 +1,4 @@
-module HandleT where
+module URLT.HandleT where
 
 import Control.Monad.Reader (ReaderT(runReaderT))
 import URLT (URLT, Link)

@@ -1,7 +1,6 @@
 module URLT where
 
 import Control.Monad.Reader (MonadReader(ask), ReaderT, withReaderT)
-import URLT
 
 -- * URLT Monad Transformer
 

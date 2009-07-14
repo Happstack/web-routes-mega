@@ -9,7 +9,7 @@ import Control.Monad.Reader (mapReaderT)
 import Control.Monad.Trans (lift)
 import Data.List (intersperse)
 import URLT 
-import HandleT(Site, runSite)
+import URLT.HandleT(Site, runSite)
 import Happstack.Server (ServerMonad(askRq,localRq), FilterMonad(composeFilter, getFilter, setFilter), ServerPartT, ToMessage(..), Response, runServerPartT, Request(rqPaths), withRequest)
 
 instance (ServerMonad m) => ServerMonad (URLT url m) where
