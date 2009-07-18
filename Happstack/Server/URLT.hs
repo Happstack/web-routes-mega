@@ -10,7 +10,7 @@ import Control.Monad.Trans (lift)
 import Data.List (intersperse)
 import URLT 
 import URLT.HandleT(Site, runSite)
-import Happstack.Server (ServerMonad(askRq,localRq), FilterMonad(composeFilter, getFilter, setFilter), ServerPartT, ToMessage(..), Response, runServerPartT, Request(rqPaths), withRequest)
+import Happstack.Server (ServerMonad(askRq,localRq), FilterMonad(composeFilter, getFilter, setFilter), ServerPartT, ToMessage(..), Response, runServerPartT, Request(rqPaths), dir, withRequest)
 
 instance (ServerMonad m) => ServerMonad (URLT url m) where
     askRq = lift askRq
@@ -24,9 +24,11 @@ instance (FilterMonad a m) => FilterMonad a (URLT url m) where
 -- * Boilerplate code for running ourSite via Happstack
 -- Easily adaptable to Network.CGI, etc.
 
+-- FIXME: the prefix can only be a single directory right now
 implSite :: (ToMessage a) => String -> Site link Link (ServerPartT IO) a -> ServerPartT IO Response
-implSite prefix siteSpec = 
-    withRequest $ \rq ->
+implSite prefix siteSpec =
+    dir (filter (/= '/') prefix) $ 
+        withRequest $ \rq ->
           let link = (concat (intersperse "/" (rqPaths rq)))
           in
             do lift $ print link
