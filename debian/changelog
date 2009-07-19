@@ -1,3 +1,9 @@
+haskell-urlt (0.3) unstable; urgency=low
+
+  * implSite now supplies its own gaurd for the prefix
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Sun, 19 Jul 2009 09:48:32 -0500
+
 haskell-urlt (0.2) unstable; urgency=low
 
   * Added a bunch of new features, happstack integration, etc
