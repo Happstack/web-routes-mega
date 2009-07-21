@@ -10,7 +10,7 @@ Build-Depends: debhelper (>= 7.0),
                ghc6-prof,
                haskell-consumer-doc,
 	       libghc6-consumer-prof,
-               libghc6-happstack-server-prof
+               libghc6-happstack-server-prof,
                libghc6-hsx-prof,
                libghc6-hsp-prof
 Build-Depends-Indep: ghc6-doc,
