@@ -4,7 +4,6 @@ Section: misc
 Maintainer: Jeremy Shaw <jeremy@seereason.com>
 Build-Depends: debhelper (>= 7.0),
                haskell-devscripts (>= 0.6.15+nmu7),
-               haskell-cdbs,
                cdbs,
                ghc6 (>= 6.8),
                ghc6-prof,
