@@ -1,3 +1,9 @@
+haskell-urlt (0.4) unstable; urgency=low
+
+  * implsite now takes the domain as an argument
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Sun, 26 Jul 2009 22:51:14 -0500
+
 haskell-urlt (0.3) unstable; urgency=low
 
   * implSite now supplies its own gaurd for the prefix

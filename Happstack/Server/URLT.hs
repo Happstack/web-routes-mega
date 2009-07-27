@@ -25,14 +25,14 @@ instance (FilterMonad a m) => FilterMonad a (URLT url m) where
 -- Easily adaptable to Network.CGI, etc.
 
 -- FIXME: the prefix can only be a single directory right now
-implSite :: (ToMessage a) => String -> Site link Link (ServerPartT IO) a -> ServerPartT IO Response
-implSite prefix siteSpec =
+implSite :: (ToMessage a) => String -> String -> Site link Link (ServerPartT IO) a -> ServerPartT IO Response
+implSite domain prefix siteSpec =
     dir (filter (/= '/') prefix) $ 
         withRequest $ \rq ->
           let link = (concat (intersperse "/" (rqPaths rq)))
           in
             do lift $ print link
-               r <- runServerPartT (runSite prefix siteSpec link) (rq { rqPaths = [] })
+               r <- runServerPartT (runSite (domain ++ prefix) siteSpec link) (rq { rqPaths = [] })
                case r of 
                  Nothing -> mzero
                  (Just v) -> return (toResponse v)
