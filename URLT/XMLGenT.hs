@@ -62,6 +62,8 @@ instance (Monad m) => EmbedAsChild (URLT url m) String where
 instance (Monad m) => EmbedAsChild (URLT url m) XML where
     asChild = XMLGenT . return . (:[]) . UChild
 
+instance Monad m => EmbedAsChild (URLT url m) () where
+  asChild () = return []
 
 instance (Monad m) => AppendChild (URLT url m) XML where
  appAll xml children = do

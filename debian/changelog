@@ -1,3 +1,9 @@
+haskell-urlt (0.5) unstable; urgency=low
+
+  * Added EmbedAsChild instance for ()
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Thu, 13 Aug 2009 17:38:19 -0500
+
 haskell-urlt (0.4) unstable; urgency=low
 
   * implsite now takes the domain as an argument
