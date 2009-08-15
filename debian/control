@@ -9,6 +9,7 @@ Build-Depends: debhelper (>= 7.0),
                ghc6-prof,
                haskell-consumer-doc,
 	       libghc6-consumer-prof,
+	       libghc6-applicative-extras-prof,
                libghc6-happstack-server-prof,
                libghc6-hsx-prof,
                libghc6-hsp-prof
@@ -16,7 +17,8 @@ Build-Depends-Indep: ghc6-doc,
                      haddock,
                      hscolour,
                      libghc6-hsp-doc,
-                     libghc6-hsx-doc
+                     libghc6-hsx-doc,
+                     libghc6-applicative-extras-doc
 Standards-Version: 3.8.1
 
 Package: libghc6-urlt-dev

@@ -1,19 +1,22 @@
 {-# LANGUAGE TemplateHaskell #-}
 module URLTH where
 
-import Control.Monad
+import Control.Applicative (Applicative((<*>)))
+import Control.Applicative.Error (Failing(Failure, Success))
+import Control.Monad (replicateM)
+import Data.List (intercalate)
 import Language.Haskell.TH
-import Control.Monad.Consumer
+import Control.Monad.Consumer (Consumer, next, runConsumer)
 
 class AsURL a where
     toURLS :: a -> ShowS
-    fromURLC :: Consumer String a
+    fromURLC :: Consumer String (Failing a)
 
 toURL :: (AsURL a) => a -> String
 toURL u = '/' : toURLS u ""
 
-fromURL :: (AsURL a) => String -> a
-fromURL str = 
+fromURL :: (AsURL a) => String -> Failing a
+fromURL str =
     fst $ runConsumer (words $ map (\c -> if c == '/' then ' ' else c) str) fromURLC
 
 -- FIXME: handle unexpected end of input
@@ -50,17 +53,22 @@ deriveAsURL name
                        do c <- newName "c"
                           doE [ bindS (varP c) (varE 'next)
                               , noBindS $ caseE (varE c)
-                                        [ do args <- replicateM nArgs (newName "arg")
-                                             match (conP (mkName "Just") [litP $ stringL (nameBase conName) ])
+                                        ([ do args <- replicateM nArgs (newName "arg")
+                                              match (conP (mkName "Just") [litP $ stringL (nameBase conName) ])
                                                        (normalB (fromURLWork conName args)) []
                                           | (conName, nArgs) <- cons
-                                        ]
-
+                                        ] ++ 
+                                        [ do str <- newName "str"
+                                             let conNames = map (nameBase . fst) cons
+                                             match (conP (mkName "Just") [varP str]) (normalB [| return (Failure ["Got '" ++ $(varE str) ++ "' expecting one of " ++ intercalate ", " conNames ]) |]) []
+                                        , match (conP (mkName "Nothing") []) (normalB  [| return (Failure ["Unexpected end of input."]) |]) []
+                                        ])
+                                
                               ]
                    fromURLWork :: Name -> [Name] -> ExpQ
                    fromURLWork conName args
                        = doE $ [ bindS (varP arg) [| fromURLC |] | arg <- args ] ++
-                               [ noBindS [| return $(foldl appE (conE conName) (map varE args)) |] ]
+                               [ noBindS [| return $(foldl (\a b -> appE (appE [| (<*>) |] a) b)  (appE [| Success |] (conE conName)) (map varE args)) |] ]
                funD 'fromURLC [clause [] (normalB body) []]
 
 
@@ -81,3 +89,4 @@ parseInfo name
           conInfo (RecC n args) = (n, length args)
           conInfo (InfixC _ n _) = (n, 2)
           conInfo (ForallC _ _ con) = conInfo con
+

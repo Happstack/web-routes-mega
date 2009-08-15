@@ -1,5 +1,5 @@
 Name:             URLT
-Version:          0.5
+Version:          0.6
 License:          BSD3
 Author:           jeremy@seereason.com
 Maintainer:       partners@seereason.com
@@ -9,7 +9,7 @@ Description:      A collection of types and functions that ensure that URLs gene
 
 Exposed-Modules:  URLT, URLTH, Happstack.Server.URLT, URLT.HandleT, URLT.QuickCheck, URLT.XMLGenT, URLT.Happstack
                   
-Build-Depends:    base >= 4, mtl, Consumer, template-haskell, happstack-server, QuickCheck, hsx, hsp
+Build-Depends:    base >= 4, mtl, Consumer, template-haskell, happstack-server, QuickCheck, hsx, hsp, applicative-extras
 
 Build-Type:       Simple
 Category:         Web, Language

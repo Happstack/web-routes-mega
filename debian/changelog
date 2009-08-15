@@ -1,3 +1,9 @@
+haskell-urlt (0.6) unstable; urgency=low
+
+  * fromURL now returns '(Success a)' instead of 'a'
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Sat, 15 Aug 2009 13:14:04 -0500
+
 haskell-urlt (0.5) unstable; urgency=low
 
   * Added EmbedAsChild instance for ()
