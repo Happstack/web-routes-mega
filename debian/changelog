@@ -1,3 +1,9 @@
+haskell-urlt (0.7) unstable; urgency=low
+
+  * Updated URLT.HandleT to use Failing instead of Maybe
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Sat, 15 Aug 2009 14:38:51 -0500
+
 haskell-urlt (0.6) unstable; urgency=low
 
   * fromURL now returns '(Success a)' instead of 'a'
