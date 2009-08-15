@@ -3,7 +3,8 @@ module Happstack.Server.URLT
     ( module URLT
     , implSite
     ) where
-    
+
+import Control.Applicative.Error(Failing(Failure, Success))    
 import Control.Monad (mzero)
 import Control.Monad.Reader (mapReaderT)
 import Control.Monad.Trans (lift)
@@ -34,6 +35,6 @@ implSite domain prefix siteSpec =
             do lift $ print link
                r <- runServerPartT (runSite (domain ++ prefix) siteSpec link) (rq { rqPaths = [] })
                case r of 
-                 Nothing -> mzero
-                 (Just v) -> return (toResponse v)
+                 (Failure _) -> mzero
+                 (Success v) -> return (toResponse v)
 
