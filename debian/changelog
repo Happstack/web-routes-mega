@@ -1,3 +1,9 @@
+haskell-urlt (0.8) unstable; urgency=low
+
+  * Merged URLT.Happstack into Happstack.Server.URLT
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Sun, 30 Aug 2009 06:08:42 -0500
+
 haskell-urlt (0.7) unstable; urgency=low
 
   * Updated URLT.HandleT to use Failing instead of Maybe

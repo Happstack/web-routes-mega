@@ -11,7 +11,7 @@ import Control.Monad.Trans (lift)
 import Data.List (intersperse)
 import URLT 
 import URLT.HandleT(Site, runSite)
-import Happstack.Server (ServerMonad(askRq,localRq), FilterMonad(composeFilter, getFilter, setFilter), ServerPartT, ToMessage(..), Response, runServerPartT, Request(rqPaths), dir, withRequest)
+import Happstack.Server (ServerMonad(askRq,localRq), FilterMonad(composeFilter, getFilter, setFilter), ServerPartT, ToMessage(..), Response, runServerPartT, Request(rqPaths), WebMonad(finishWith), dir, withRequest)
 
 instance (ServerMonad m) => ServerMonad (URLT url m) where
     askRq = lift askRq
@@ -21,6 +21,9 @@ instance (FilterMonad a m) => FilterMonad a (URLT url m) where
     setFilter f     = lift (setFilter f)
     composeFilter f = lift (composeFilter f)
     getFilter       = mapReaderT getFilter
+
+instance (WebMonad a m) => WebMonad a (URLT url m) where
+    finishWith a = lift $ finishWith a
 
 -- * Boilerplate code for running ourSite via Happstack
 -- Easily adaptable to Network.CGI, etc.
@@ -32,8 +35,7 @@ implSite domain prefix siteSpec =
         withRequest $ \rq ->
           let link = (concat (intersperse "/" (rqPaths rq)))
           in
-            do lift $ print link
-               r <- runServerPartT (runSite (domain ++ prefix) siteSpec link) (rq { rqPaths = [] })
+            do r <- runServerPartT (runSite (domain ++ prefix) siteSpec link) (rq { rqPaths = [] })
                case r of 
                  (Failure _) -> mzero
                  (Success v) -> return (toResponse v)
