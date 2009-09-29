@@ -3,10 +3,9 @@
 module URLT.XMLGenT where
 
 import HSP
-import Control.Applicative
-import Control.Monad.Identity
+import Control.Applicative ((<$>))
 import qualified HSX.XMLGenerator as HSX
-import URLT
+import URLT.Base (URLT)
 
 instance (Monad m) => HSX.XMLGen (URLT url m) where
     type HSX.XML (URLT url m) = XML

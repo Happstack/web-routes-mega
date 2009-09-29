@@ -1,10 +1,7 @@
 module URLT.QuickCheck where
 
-import Control.Applicative.Error
-import Control.Monad.Consumer
-import Test.QuickCheck
--- import URLT
-import URLTH
+import Control.Applicative.Error (Failing(Success))
+import URLT.TH (AsURL(toURLS), fromURL)
 
 asURLInverse_prop :: (Eq url, AsURL url) => url -> Bool
 asURLInverse_prop url =

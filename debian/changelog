@@ -1,3 +1,10 @@
+haskell-urlt (0.9) unstable; urgency=low
+
+  * Reorganized the module hiearchy to something saner. Now you can just import URLT.
+  * Added Functor instance for Site
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Mon, 28 Sep 2009 20:06:21 -0500
+
 haskell-urlt (0.8) unstable; urgency=low
 
   * Merged URLT.Happstack into Happstack.Server.URLT

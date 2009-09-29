@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module URLTH where
+module URLT.TH where
 
 import Control.Applicative (Applicative((<*>)))
 import Control.Applicative.Error (Failing(Failure, Success))
