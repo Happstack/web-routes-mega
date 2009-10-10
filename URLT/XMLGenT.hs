@@ -5,7 +5,7 @@ module URLT.XMLGenT where
 import HSP
 import Control.Applicative ((<$>))
 import qualified HSX.XMLGenerator as HSX
-import URLT.Base (URLT)
+import URLT.Base (URLT, ShowURL(showURL), URL)
 
 instance (Monad m) => HSX.XMLGen (URLT url m) where
     type HSX.XML (URLT url m) = XML
@@ -79,3 +79,8 @@ instance (Monad m) => SetAttr (URLT url m) XML where
          Element n as cs -> return $ Element n (foldr (:) as (map unUAttr attrs)) cs
 
 instance (Monad m) => XMLGenerator (URLT url m)
+
+
+instance (ShowURL m) => ShowURL (XMLGenT m) where
+    type URL (XMLGenT m) = URL m
+    showURL url = XMLGenT $ showURL url
