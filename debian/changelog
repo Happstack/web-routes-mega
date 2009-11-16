@@ -1,3 +1,9 @@
+haskell-urlt (0.11) unstable; urgency=low
+
+  * Generalize type of implSite
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Mon, 16 Nov 2009 09:54:13 -0600
+
 haskell-urlt (0.10) unstable; urgency=low
 
   * Turn showURL into a class so that we can call it with out having to

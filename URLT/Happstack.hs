@@ -22,7 +22,7 @@ instance (WebMonad a m) => WebMonad a (URLT url m) where
     finishWith = lift . finishWith
 
 -- FIXME: the prefix can only be a single directory right now
-implSite :: (ToMessage a) => String -> String -> Site link Link (ServerPartT IO) a -> ServerPartT IO Response
+implSite :: (Monad m) => String -> String -> Site link Link (ServerPartT m) a -> ServerPartT m a
 implSite domain prefix siteSpec =
     dir (filter (/= '/') prefix) $ 
         withRequest $ \rq ->
@@ -31,5 +31,5 @@ implSite domain prefix siteSpec =
             do r <- runServerPartT (runSite (domain ++ prefix) siteSpec link) (rq { rqPaths = [] })
                case r of 
                  (Failure _) -> mzero
-                 (Success v) -> return (toResponse v)
+                 (Success v) -> return v
 
