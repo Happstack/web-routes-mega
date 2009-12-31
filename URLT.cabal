@@ -17,7 +17,7 @@ Library
         Build-Type:       Simple
         Extensions:       TemplateHaskell,
                           FlexibleContexts,
-			  CPP
+                          CPP
 
 source-repository head
     type:     darcs
