@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE CPP, TemplateHaskell #-}
 module URLT.TH where
 
 import Control.Applicative (Applicative((<*>)))
@@ -27,13 +27,19 @@ deriveAsURL name
     = do c <- parseInfo name
          case c of
            Tagged cons cx keys ->
-               do let context = [ mkType ''AsURL [varT key] | key <- keys ] ++ map return cx
+               do let context = [ mkCtx ''AsURL [varT key] | key <- keys ] ++ map return cx
                   i <- instanceD (sequence context) (mkType ''AsURL [mkType name (map varT keys)])
                        [ toURLFn cons 
                        , fromURLCFn cons
                        ]
                   return [i]
     where
+#if MIN_VERSION_template_haskell(2,4,0)
+      mkCtx = classP
+#else
+      mkCtx = mkType
+#endif
+
       toURLFn :: [(Name, Int)] -> DecQ
       toURLFn cons 
           = do inp <- newName "inp"
@@ -75,6 +81,7 @@ deriveAsURL name
 mkType :: Name -> [TypeQ] -> TypeQ
 mkType con = foldl appT (conT con)
 
+
 data Class = Tagged [(Name, Int)] Cxt [Name]
 
 
@@ -82,11 +89,16 @@ parseInfo :: Name -> Q Class
 parseInfo name
     = do info <- reify name
          case info of
-           TyConI (DataD cx _ keys cs _)    -> return $ Tagged (map conInfo cs) cx keys
-           TyConI (NewtypeD cx _ keys con _)-> return $ Tagged [conInfo con] cx keys
+           TyConI (DataD cx _ keys cs _)    -> return $ Tagged (map conInfo cs) cx $ map conv keys
+           TyConI (NewtypeD cx _ keys con _)-> return $ Tagged [conInfo con] cx $ map conv keys
            _                            -> error "Invalid input"
     where conInfo (NormalC n args) = (n, length args)
           conInfo (RecC n args) = (n, length args)
           conInfo (InfixC _ n _) = (n, 2)
           conInfo (ForallC _ _ con) = conInfo con
-
+#if MIN_VERSION_template_haskell(2,4,0)
+          conv (PlainTV nm) = nm
+          conv (KindedTV nm _) = nm
+#else
+          conv = id
+#endif

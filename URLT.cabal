@@ -1,5 +1,5 @@
 Name:             URLT
-Version:          0.11
+Version:          0.12
 License:          BSD3
 License-File:     debian/copyright
 Author:           jeremy@seereason.com
@@ -16,7 +16,8 @@ Library
         Exposed-Modules:  URLT, URLT.Base, URLT.HandleT, URLT.Happstack, URLT.QuickCheck, URLT.TH, URLT.XMLGenT
         Build-Type:       Simple
         Extensions:       TemplateHaskell,
-                          FlexibleContexts
+                          FlexibleContexts,
+			  CPP
 
 source-repository head
     type:     darcs
