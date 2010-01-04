@@ -12,7 +12,9 @@ Build-Depends: debhelper (>= 7.0),
 	       libghc6-applicative-extras-prof,
                libghc6-happstack-server-prof,
                libghc6-hsx-prof,
-               libghc6-hsp-prof
+               libghc6-hsp-prof,
+               libghc6-quickcheck2-prof,
+               libghc6-quickcheck2-doc
 Build-Depends-Indep: ghc6-doc,
                      haddock,
                      hscolour,
