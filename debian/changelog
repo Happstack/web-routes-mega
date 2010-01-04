@@ -1,3 +1,9 @@
+haskell-urlt (0.13) unstable; urgency=low
+
+  * Update to QuickCheck 2
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Mon, 04 Jan 2010 15:24:01 -0600
+
 haskell-urlt (0.12) unstable; urgency=low
 
   * Added support for template-haskel >= 2.4.0
