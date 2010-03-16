@@ -1,3 +1,9 @@
+haskell-urlt (0.14) unstable; urgency=low
+
+  * Added support for Regular
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Tue, 16 Mar 2010 16:37:28 -0500
+
 haskell-urlt (0.13) unstable; urgency=low
 
   * Update to QuickCheck 2

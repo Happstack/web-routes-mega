@@ -14,13 +14,15 @@ Build-Depends: debhelper (>= 7.0),
                libghc6-hsx-prof,
                libghc6-hsp-prof,
                libghc6-quickcheck2-prof,
-               libghc6-quickcheck2-doc
+               libghc6-quickcheck2-doc,
+               libghc6-regular-doc
 Build-Depends-Indep: ghc6-doc,
                      haddock,
                      hscolour,
                      libghc6-hsp-doc,
                      libghc6-hsx-doc,
-                     libghc6-applicative-extras-doc
+                     libghc6-applicative-extras-doc,
+                     haskell-regular-doc
 Standards-Version: 3.8.1
 
 Package: libghc6-urlt-dev

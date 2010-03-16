@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP, TemplateHaskell #-}
+{-# OPTIONS_GHC -optP-include -optPdist/build/autogen/cabal_macros.h #-}
 module URLT.TH where
 
 import Control.Applicative (Applicative((<*>)))
