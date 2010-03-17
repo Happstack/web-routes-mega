@@ -1,3 +1,9 @@
+haskell-urlt (0.15) unstable; urgency=low
+
+  * Added URLT.Wai and URLT.Dispatch
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Wed, 17 Mar 2010 14:28:38 -0500
+
 haskell-urlt (0.14) unstable; urgency=low
 
   * Added support for Regular
