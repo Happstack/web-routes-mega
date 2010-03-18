@@ -1,25 +1,25 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeSynonymInstances, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeSynonymInstances, UndecidableInstances, PackageImports #-}
 module URLT.Happstack where
 
 import Control.Applicative.Error (Failing(Failure, Success))
 import Control.Monad (MonadPlus(mzero))
-import Control.Monad.Trans (lift)
 import Data.List (intersperse)
 import Happstack.Server (FilterMonad(..), ServerMonad(..), WebMonad(..), ServerPartT, Response, Request(rqPaths), ToMessage(..), dir, runServerPartT, withRequest)
-import URLT.Base (URLT(URLT), Link, mapURLT)
+import URLT.Base (URLT(URLT), Link, liftURLT, mapURLT)
+import URLT.MTL
 import URLT.HandleT (Site, runSite)
 
 instance (ServerMonad m) => ServerMonad (URLT url m) where
-    askRq       = lift askRq
+    askRq       = liftURLT askRq
     localRq f m = mapURLT (localRq f) m
 
 instance (FilterMonad a m)=> FilterMonad a (URLT url m) where
-    setFilter     = lift . setFilter
-    composeFilter = lift . composeFilter
+    setFilter     = liftURLT . setFilter
+    composeFilter = liftURLT . composeFilter
     getFilter     = mapURLT getFilter 
 
 instance (WebMonad a m) => WebMonad a (URLT url m) where
-    finishWith = lift . finishWith
+    finishWith = liftURLT . finishWith
 
 -- FIXME: the prefix can only be a single directory right now
 implSite :: (Monad m) => String -> String -> Site link Link (ServerPartT m) a -> ServerPartT m a

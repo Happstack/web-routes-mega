@@ -1,11 +1,23 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, TypeFamilies, PackageImports, FlexibleContexts, UndecidableInstances #-}
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Control.Monad.Trans.Reader
+-- Copyright   :  (c) 2010 Jeremy Shaw
+--                (c) Andy Gill 2001
+--                (c) Oregon Graduate Institute of Science and Technology, 2001
+-- License     :  BSD-style (see the file LICENSE)
+--
+-- Maintainer  :  libraries@haskell.org
+-- Stability   :  experimental
+-- Portability :  portable
+--
+-- Declaration of the 'URLT' monad transformer
+-----------------------------------------------------------------------------
 module URLT.Base where
 
 import Control.Applicative
-import Control.Monad (MonadPlus)
-import Control.Monad.Trans (MonadTrans, MonadIO)
-import Control.Monad.Fix (MonadFix)
-import Control.Monad.Reader (MonadReader(ask), ReaderT(ReaderT), mapReaderT, withReaderT)
+import Control.Monad (MonadPlus(mzero, mplus))
+import Control.Monad.Fix (MonadFix(mfix))
 import HSX.XMLGenerator (XMLGenT(..))
 
 -- * URLT Monad Transformer
@@ -13,14 +25,50 @@ import HSX.XMLGenerator (XMLGenT(..))
 type Link = String
 
 -- |monad transformer for generating URLs
-newtype URLT url m a = URLT { unURLT :: ReaderT  (url -> Link) m a }
-    deriving (Functor, Monad, MonadFix, MonadPlus, MonadIO, MonadTrans, MonadReader (url -> Link))
+newtype URLT url m a = URLT { unURLT :: (url -> Link) -> m a }
+--     deriving (Functor, Monad, MonadFix, MonadPlus) -- , MonadIO, MonadTrans, MonadReader (url -> Link))
 
--- NOTE: the Monad m requirement comes from the Functor ReaderT instance
-instance (Applicative m, Monad m) => Applicative (URLT url m) where
-    pure = return
-    (URLT (ReaderT f)) <*> (URLT (ReaderT a))
-        = URLT $ ReaderT $ \env -> (f env) <*> (a env)
+runURLT :: URLT url m a -> (url -> Link) -> m a
+runURLT = unURLT
+
+-- | Transform the computation inside a @URLT@.
+mapURLT :: (m a -> n b) -> URLT url m a -> URLT url n b
+mapURLT f (URLT m) = URLT $ f . m
+
+-- | Execute a computation in a modified environment
+withURLT :: ((url' -> Link) -> (url -> Link)) -> URLT url m a -> URLT url' m a
+withURLT f (URLT m) = URLT $ m . f
+
+liftURLT :: m a -> URLT url m a
+liftURLT m = URLT (const m)
+
+askURLT :: (Monad m) => URLT url m (url -> String)
+askURLT = URLT return
+
+instance (Functor m) => Functor (URLT url m) where
+  fmap f = mapURLT (fmap f)
+  
+instance (Applicative m) => Applicative (URLT url m) where  
+  pure = liftURLT . pure
+  f <*> v = URLT $ \ url -> unURLT f url <*> unURLT v url
+
+instance (Alternative m) => Alternative (URLT url m) where
+    empty   = liftURLT empty
+    m <|> n = URLT $ \ url -> unURLT m url <|> unURLT n url
+
+instance (Monad m) => Monad (URLT url m) where
+    return   = liftURLT . return
+    m >>= k  = URLT $ \ url -> do
+        a <- unURLT m url
+        unURLT (k a) url
+    fail msg = liftURLT (fail msg)
+
+instance (MonadPlus m, Monad (URLT url m)) => MonadPlus (URLT url m) where
+    mzero       = liftURLT mzero
+    m `mplus` n = URLT $ \ url -> unURLT m url `mplus` unURLT n url
+
+instance (MonadFix m) => MonadFix (URLT url m) where
+    mfix f = URLT $ \ url -> mfix $ \ a -> unURLT (f a) url
 
 class ShowURL m where
     type URL m
@@ -29,15 +77,8 @@ class ShowURL m where
 instance (Monad m) => ShowURL (URLT url m) where
     type URL (URLT url m) = url
     showURL url =
-        do showF <- ask
+        do showF <- askURLT
            return (showF url)
-
--- |similar to withReaderT
-withURLT :: ((url' -> Link) -> (url -> Link)) -> URLT url m a -> URLT url' m a
-withURLT f (URLT r) = URLT $ withReaderT f r
-
-mapURLT :: (m a -> n b) -> URLT url m a -> URLT url n b
-mapURLT f (URLT r) = URLT $ mapReaderT f r
 
 -- |used to embed a URLT into a larger parent url
 nestURL :: (Monad m) => (url2 -> url1) -> URLT url2 m a -> URLT url1 m a
@@ -45,6 +86,5 @@ nestURL b = withURLT (. b)
 
 crossURL :: (Monad m) => (url2 -> url1) -> URLT url1 m (url2 -> Link)
 crossURL f = 
-    do showF <- ask
+    do showF <- askURLT
        return $ \url2 -> showF (f url2)
-

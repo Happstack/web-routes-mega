@@ -8,8 +8,8 @@ module URLT
     )
     where
 
-import URLT.XMLGenT
 import URLT.Base
+import URLT.XMLGenT
 import URLT.Happstack
 import URLT.TH
 import URLT.QuickCheck

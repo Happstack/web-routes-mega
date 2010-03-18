@@ -2,7 +2,7 @@ module URLT.HandleT where
 
 import Control.Applicative.Error(Failing(Failure, Success))
 import Control.Monad.Reader (ReaderT(runReaderT))
-import URLT.Base (URLT(unURLT), Link)
+import URLT.Base (URLT, Link, runURLT)
 
 data Site link url m a
     = Site { handleLink  :: link -> URLT link m a
@@ -11,7 +11,7 @@ data Site link url m a
            , parseLink   :: url -> Failing link 
            }
 
-instance (Monad m) => Functor (Site u l m) where
+instance (Functor m) => Functor (Site u l m) where
     fmap f site =
         site { handleLink = \link -> fmap f ((handleLink site) link) }
 
@@ -24,4 +24,4 @@ runSite prefix site linkStr =
     in
       case fLink of
         (Failure errs) -> return (Failure errs)
-        (Success lnk) -> return . Success =<< runReaderT (unURLT ((handleLink site) lnk)) ((prefix ++) . (formatLink site))
+        (Success lnk) -> return . Success =<< runURLT ((handleLink site) lnk) ((prefix ++) . (formatLink site))
