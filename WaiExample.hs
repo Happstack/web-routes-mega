@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, TypeFamilies, TypeSynonymInstances #-}
 module Main where
 
+import Control.Applicative(Applicative((<*>),pure), (<$>), (*>))
 import Control.Applicative.Error
 import Control.Monad.Consumer(next)
 import qualified Data.ByteString.Char8 as S
@@ -12,9 +13,14 @@ import Web.Encodings (decodeUrl, encodeUrl)
 import Network.Wai 
 import Network.Wai.Enumerator
 import Network.Wai.Handler.SimpleServer (run)
-import Text.Html
+import Text.Html ((!), (<<), (+++), Html, anchor, body, href, toHtml, renderHtml, header, thetitle)
+import URLT.AsURL
+import URLT.Parsec (fromURLP)
 import URLT.TH
-
+import Text.Parsec ((<|>),many1)
+import Text.Parsec.Char(char, noneOf, string)
+import Text.Parsec.String(Parser)
+import System.FilePath((</>))
 -- The URL / route types
 
 data BlogURL
@@ -71,6 +77,7 @@ main1 =
 instance AsURL String where
   toURLS = showString
   fromURLC = next
+
 $(deriveAsURL ''BlogURL)
 $(deriveAsURL ''SiteURL)
 
@@ -78,7 +85,30 @@ main1b :: IO ()
 main1b =
   do now <- getCurrentTime
      run 3000 $ handleWaiU (mySite now) "http://localhost:3000"
+     
+main1c :: IO ()
+main1c =
+  do now <- getCurrentTime
+     run 3000 $ handleWai toSiteURL (fromURLP pSiteURL) (mySite now) "http://localhost:3000"
+       where
+         pBlogURL :: Parser BlogURL
+         pBlogURL = 
+           do char '/'
+              (BlogPost <$> many1 (noneOf "/")) <|> pure BlogHome
+         pSiteURL :: Parser SiteURL
+         pSiteURL =
+           do char '/'
+              MyBlog <$> (string "blog" *> pBlogURL) <|> pure MyHome
+         
+         toBlogURL :: BlogURL -> String
+         toBlogURL BlogHome         = ""
+         toBlogURL (BlogPost title) = title
+         
+         toSiteURL :: SiteURL -> String
+         toSiteURL MyHome           = ""
+         toSiteURL (MyBlog blogURL) = "blog/" </> (toBlogURL blogURL)
 
+     
 -- we can also use Dispatch
 
 -- first we create a new type to represent the extra arguments to myBlog

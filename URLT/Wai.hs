@@ -5,7 +5,7 @@ import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
 import Network.Wai
 import Network.Wai.Enumerator
-import URLT.TH
+import URLT.AsURL
 
 handleWai :: (url -> String) -> (String -> Failing url) -> ((url -> String) -> url -> Application) -> String -> Application
 handleWai fromUrl toUrl handler approot =

@@ -2,8 +2,8 @@
 module URLT.Dispatch where
 
 import Network.Wai
+import URLT.AsURL
 import URLT.Wai
-import URLT.TH
 
 class Dispatch a where
   type Routes a

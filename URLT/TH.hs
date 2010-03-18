@@ -8,17 +8,8 @@ import Control.Monad (replicateM)
 import Data.List (intercalate)
 import Language.Haskell.TH
 import Control.Monad.Consumer (Consumer, next, runConsumer)
+import URLT.AsURL
 
-class AsURL a where
-    toURLS :: a -> ShowS
-    fromURLC :: Consumer String (Failing a)
-
-toURL :: (AsURL a) => a -> String
-toURL u = '/' : toURLS u ""
-
-fromURL :: (AsURL a) => String -> Failing a
-fromURL str =
-    fst $ runConsumer (words $ map (\c -> if c == '/' then ' ' else c) str) fromURLC
 
 -- FIXME: handle unexpected end of input
 -- FIXME: handle invalid input

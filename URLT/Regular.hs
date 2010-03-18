@@ -7,7 +7,7 @@ import Control.Monad.Consumer (Consumer(Consumer), next, runConsumer)
 import Control.Monad(MonadPlus(mzero, mplus), ap)
 import Data.Char (toLower)
 import Generics.Regular
-import URLT.TH (AsURL(fromURLC, toURLS))
+import URLT.AsURL (AsURL(fromURLC, toURLS))
 
 class GToURL f where
    gtoURLS   :: f a -> ShowS
