@@ -1,7 +1,8 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeSynonymInstances #-}
 module Main where
 
 import Control.Applicative.Error
+import Control.Monad.Consumer(next)
 import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
 import Data.Time (UTCTime, getCurrentTime)
@@ -12,6 +13,7 @@ import Network.Wai
 import Network.Wai.Enumerator
 import Network.Wai.Handler.SimpleServer (run)
 import Text.Html
+import URLT.TH
 
 -- The URL / route types
 
@@ -64,7 +66,18 @@ main1 =
   do now <- getCurrentTime
      let fromAbs str = maybeRead' (decodeUrl . drop 1 $ str) ("Failed to parse as url: " ++ str)
          mkAbs       = (encodeUrl . show)
-     run 3000 $ handleWai mkAbs fromAbs (mySite now)
+     run 3000 $ handleWai mkAbs fromAbs (mySite now) "http://localhost:3000"
+
+instance AsURL String where
+  toURLS = showString
+  fromURLC = next
+$(deriveAsURL ''BlogURL)
+$(deriveAsURL ''SiteURL)
+
+main1b :: IO ()
+main1b =
+  do now <- getCurrentTime
+     run 3000 $ handleWaiU (mySite now) "http://localhost:3000"
 
 -- we can also use Dispatch
 
@@ -136,4 +149,14 @@ main2 =
   do now <- getCurrentTime
      let fromAbs str = maybeRead' (decodeUrl . drop 1 $ str) ("Failed to parse as url: " ++ str)
          mkAbs       = (encodeUrl . show)
-     run 3000 $ handleWai mkAbs fromAbs (dispatch (SiteArgs (BlogArgs now)))
+     run 3000 $ handleWai mkAbs fromAbs (dispatch (SiteArgs (BlogArgs now))) "http://localhost:3000"
+
+main2b :: IO ()
+main2b =
+  do now <- getCurrentTime
+     run 3000 $ handleWaiD (SiteArgs (BlogArgs now)) "http://localhost:3000"
+     
+main2c :: IO ()     
+main2c =
+  do now <- getCurrentTime
+     run 3000 $ handleWaiU (mySiteD (SiteArgs (BlogArgs now))) "http://localhost:3000"
