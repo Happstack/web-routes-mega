@@ -7,22 +7,23 @@ import Control.Monad.Consumer (Consumer(Consumer), next, runConsumer)
 import Control.Monad(MonadPlus(mzero, mplus), ap)
 import Data.Char (toLower)
 import Generics.Regular
-import URLT.AsURL (AsURL(fromURLC, toURLS))
+import URLT.PathInfo (PathInfo(fromPathSegments, toPathSegments))
 
 class GToURL f where
-   gtoURLS   :: f a -> ShowS
-   gfromURLC :: Consumer String (Failing (f a))
-   
-instance AsURL a => GToURL (K a) where   
-  gtoURLS (K a) = toURLS a
-  gfromURLC = fmap (fmap K) $ fromURLC 
-  
+   gtoPathSegments   :: f a -> [String]
+   gfromPathSegments :: Consumer String (Failing (f a))
+
+instance PathInfo a => GToURL (K a) where   
+  gtoPathSegments (K a) = toPathSegments a
+  gfromPathSegments = fmap (fmap K) $ fromPathSegments 
+
 instance (GToURL f, GToURL g) => GToURL (f :+: g) where
-   gtoURLS   (L x) = gtoURLS x
-   gtoURLS   (R y) = gtoURLS y
-   gfromURLC = let urlLeft  = fmap (fmap L) $ gfromURLC
-                   urlRight = fmap (fmap R) $ gfromURLC
-              in urlLeft `combine` urlRight
+   gtoPathSegments   (L x) = gtoPathSegments x
+   gtoPathSegments   (R y) = gtoPathSegments y
+   gfromPathSegments = 
+     let urlLeft  = fmap (fmap L) $ gfromPathSegments
+         urlRight = fmap (fmap R) $ gfromPathSegments
+     in urlLeft `combine` urlRight
                 where
                   combine :: Consumer String (Failing a) -> Consumer String (Failing a) -> Consumer String (Failing a)
                   combine (Consumer f) (Consumer g) =
@@ -35,27 +36,29 @@ instance (GToURL f, GToURL g) => GToURL (f :+: g) where
                           (Failure errs2, _) -> (Failure (errs1 ++ errs2), c)
 
 instance GToURL U where
-  gtoURLS U = id
-  gfromURLC =
+  gtoPathSegments U = []
+  gfromPathSegments =
     do m <- next
        case m of
          Nothing -> return (Success U)
          (Just str) -> return (Failure ["Excepted end of input, but got: " ++ str])
 
 instance GToURL f => GToURL (S s f) where
-   gtoURLS   (S x) = gtoURLS x
-   gfromURLC       = fmap (fmap S)  gfromURLC
-   
-instance forall c f. (Constructor c, GToURL f) => GToURL (C c f) where
-   gtoURLS c@(C x)  = showString (lower $ conName c) . showString "/" . gtoURLS x
-   gfromURLC = let constr = undefined :: C c f r
-                   name   = conName constr
-               in do mx <- next
-                     case mx of  
-                       Nothing -> return (Failure ["Excepted '" ++ lower name ++ "' but got end of input."])
-                       (Just x) ->
-                         if   (lower x == lower name)
-                         then fmap (fmap C) $ gfromURLC
-                         else return (Failure ["Excepted '" ++ lower name ++ "' but got '" ++ lower x ++ "'"])
+   gtoPathSegments   (S x) = gtoPathSegments x
+   gfromPathSegments       = fmap (fmap S)  gfromPathSegments
 
+lower :: String -> String
 lower = map toLower
+
+instance forall c f. (Constructor c, GToURL f) => GToURL (C c f) where
+   gtoPathSegments c@(C x)  = (lower $ conName c) : gtoPathSegments x
+   gfromPathSegments = 
+     let constr = undefined :: C c f r
+         name   = conName constr
+     in do mx <- next
+           case mx of  
+             Nothing -> return (Failure ["Excepted '" ++ lower name ++ "' but got end of input."])
+             (Just x) ->
+               if   (lower x == lower name)
+               then fmap (fmap C) $ gfromPathSegments
+               else return (Failure ["Excepted '" ++ lower name ++ "' but got '" ++ lower x ++ "'"])
