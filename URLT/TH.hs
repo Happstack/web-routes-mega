@@ -8,21 +8,21 @@ import Control.Monad (replicateM)
 import Data.List (intercalate)
 import Language.Haskell.TH
 import Control.Monad.Consumer (Consumer, next, runConsumer)
-import URLT.AsURL
+import URLT.PathInfo
 
 
 -- FIXME: handle unexpected end of input
 -- FIXME: handle invalid input
 -- FIXME: handle when called with a type (not data, newtype)
-deriveAsURL :: Name -> Q [Dec]
-deriveAsURL name
+derivePathInfo :: Name -> Q [Dec]
+derivePathInfo name
     = do c <- parseInfo name
          case c of
            Tagged cons cx keys ->
-               do let context = [ mkCtx ''AsURL [varT key] | key <- keys ] ++ map return cx
-                  i <- instanceD (sequence context) (mkType ''AsURL [mkType name (map varT keys)])
+               do let context = [ mkCtx ''PathInfo [varT key] | key <- keys ] ++ map return cx
+                  i <- instanceD (sequence context) (mkType ''PathInfo [mkType name (map varT keys)])
                        [ toURLFn cons 
-                       , fromURLCFn cons
+                       , fromPathSegmentsFn cons
                        ]
                   return [i]
     where
@@ -38,15 +38,15 @@ deriveAsURL name
                let body = caseE (varE inp) $
                             [ do args <- replicateM nArgs (newName "arg")
                                  let matchCon = conP conName (map varP args)
-                                     conStr = (nameBase conName) ++ "/"
+                                     conStr = (nameBase conName)
                                  match matchCon (normalB (toURLWork conStr args)) []
                                   |  (conName, nArgs) <- cons ]
                    toURLWork :: String -> [Name] -> ExpQ
                    toURLWork conStr args
-                       = foldr1 (\ a b -> appE (appE [| (.) |] a) b) ([| ((++) conStr) |] : [ [| toURLS $(varE arg) |] | arg <- args ])
-               funD 'toURLS [clause [varP inp] (normalB body)  []]
-      fromURLCFn :: [(Name,Int)] -> DecQ
-      fromURLCFn cons
+                       = foldr1 (\a b -> appE (appE [| (++) |] a) b) ([| [conStr] |] : [ [| toPathSegments $(varE arg) |] | arg <- args ])
+               funD 'toPathSegments [clause [varP inp] (normalB body)  []]
+      fromPathSegmentsFn :: [(Name,Int)] -> DecQ
+      fromPathSegmentsFn cons
           = do let body = 
                        do c <- newName "c"
                           doE [ bindS (varP c) (varE 'next)
@@ -65,9 +65,9 @@ deriveAsURL name
                               ]
                    fromURLWork :: Name -> [Name] -> ExpQ
                    fromURLWork conName args
-                       = doE $ [ bindS (varP arg) [| fromURLC |] | arg <- args ] ++
+                       = doE $ [ bindS (varP arg) [| fromPathSegments |] | arg <- args ] ++
                                [ noBindS [| return $(foldl (\a b -> appE (appE [| (<*>) |] a) b)  (appE [| Success |] (conE conName)) (map varE args)) |] ]
-               funD 'fromURLC [clause [] (normalB body) []]
+               funD 'fromPathSegments [clause [] (normalB body) []]
 
 
 mkType :: Name -> [TypeQ] -> TypeQ
