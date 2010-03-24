@@ -6,15 +6,26 @@ import qualified Data.ByteString.Lazy.Char8 as L
 import Network.Wai
 import Network.Wai.Enumerator
 import URLT.PathInfo
+import URLT.HandleT
+import URLT.Monad
 
-handleWai_ :: (url -> String) -> (String -> Failing url) -> ((url -> String) -> url -> Application) -> String -> Application
-handleWai_ fromUrl toUrl handler approot =
+handleWai_ :: (url -> String) -> (String -> Failing url) -> String -> ((url -> String) -> url -> Application) -> Application
+handleWai_ fromUrl toUrl approot handler =
   \request ->
-     do let fUrl = toUrl $ S.unpack $ pathInfo request
+     do let fUrl = toUrl $ stripOverlap approot $ S.unpack $ pathInfo request
         case fUrl of
           (Failure errs) -> return $ Response Status404 [] $ Right $ fromLBS (L.pack $ unlines errs)
           (Success url) -> handler (showString approot . fromUrl) url request
 
-handleWai :: (PathInfo url) => ((url -> String) -> url -> Application) -> String -> Application
-handleWai handler approot = handleWai_ toPathInfo fromPathInfo handler approot
+handleWai :: (PathInfo url) => String -> ((url -> String) -> url -> Application) -> Application
+handleWai approot handler = handleWai_ toPathInfo fromPathInfo approot handler
 
+handleWaiURLT_ :: (url -> String) -> (String -> Failing url) -> String -> (url -> Request -> URLT url IO Response) -> Application
+handleWaiURLT_  toPathInfo fromPathInfo approot handler =
+   handleWai_ toPathInfo fromPathInfo approot (\toPathInfo' url request -> runURLT (handler url request) toPathInfo') 
+
+handleWaiURLT :: (PathInfo url) => String -> (url -> Request -> URLT url IO Response) -> Application
+handleWaiURLT approot handler = handleWaiURLT_ toPathInfo fromPathInfo approot handler
+
+waiSite :: Site url String Application -> String -> Application
+waiSite site approot = handleWai_ (formatLink site) (withDefault site) approot (handleLink site) 

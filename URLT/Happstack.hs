@@ -3,9 +3,9 @@ module URLT.Happstack where
 
 import Control.Applicative.Error (Failing(Failure, Success))
 import Control.Monad (MonadPlus(mzero))
-import Data.List (intersperse)
-import Happstack.Server (FilterMonad(..), ServerMonad(..), WebMonad(..), ServerPartT, Response, Request(rqPaths), ToMessage(..), dir, runServerPartT, withRequest)
-import URLT.Monad (URLT(URLT), Link, liftURLT, mapURLT)
+import Data.List (intercalate)
+import Happstack.Server (FilterMonad(..), ServerMonad(..), WebMonad(..), ServerPartT, Response, Request(rqPaths), ToMessage(..), dirs, runServerPartT, withRequest)
+import URLT.Monad (URLT(URLT), liftURLT, mapURLT)
 import URLT.MTL
 import URLT.HandleT (Site, runSite)
 
@@ -21,15 +21,12 @@ instance (FilterMonad a m)=> FilterMonad a (URLT url m) where
 instance (WebMonad a m) => WebMonad a (URLT url m) where
     finishWith = liftURLT . finishWith
 
--- FIXME: the prefix can only be a single directory right now
-implSite :: (Monad m) => String -> String -> Site link Link (ServerPartT m) a -> ServerPartT m a
-implSite domain prefix siteSpec =
-    dir (filter (/= '/') prefix) $ 
-        withRequest $ \rq ->
-          let link = (concat (intersperse "/" (rqPaths rq)))
-          in
-            do r <- runServerPartT (runSite (domain ++ prefix) siteSpec link) (rq { rqPaths = [] })
-               case r of 
-                 (Failure _) -> mzero
-                 (Success v) -> return v
-
+implSite :: (Monad m) => String -> FilePath -> Site url String (ServerPartT m a) -> ServerPartT m a
+implSite domain approot siteSpec =
+    dirs approot $ do rq <- askRq
+                      let pathInfo = intercalate "/" (rqPaths rq)
+                          f        = runSite (domain ++ approot) siteSpec pathInfo
+                      case f of
+                        (Failure _) -> 
+                          mzero
+                        (Success sp) -> localRq (const $ rq { rqPaths = [] }) sp

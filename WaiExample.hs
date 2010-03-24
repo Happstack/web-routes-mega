@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeSynonymInstances #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeSynonymInstances, EmptyDataDecls #-}
 module Main where
 
 import Control.Applicative(Applicative((<*>),pure), (<$>), (*>))
@@ -7,20 +7,28 @@ import Control.Monad.Consumer(next)
 import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
 import Data.Time (UTCTime, getCurrentTime)
+import Generics.Regular
 import URLT.Wai
-import URLT.Dispatch
-import Web.Encodings (decodeUrl, encodeUrl)
 import Network.Wai 
 import Network.Wai.Enumerator
 import Network.Wai.Handler.SimpleServer (run)
 import Text.Html ((!), (<<), (+++), Html, anchor, body, href, toHtml, renderHtml, header, thetitle)
-import URLT.AsURL
-import URLT.Parsec (fromURLP)
+import URLT.Base
+import URLT.PathInfo
 import URLT.TH
+import URLT.HandleT
+import URLT.Monad
+import URLT.Regular
+import URLT.QuickCheck
+import Test.QuickCheck (Arbitrary(..), oneof, quickCheck)
 import Text.Parsec ((<|>),many1)
 import Text.Parsec.Char(char, noneOf, string)
 import Text.Parsec.String(Parser)
 import System.FilePath((</>))
+
+-- NOTE: in these examples the homepage is:
+-- http://localhost:3000/MyHome
+
 -- The URL / route types
 
 data BlogURL
@@ -40,6 +48,9 @@ page contents =
   header (thetitle  (toHtml "title")) +++ body contents
              
 -- the BlogURL route handler Application
+--
+-- In this version, the function for converting the URL type to its
+-- String representation is passed in as the argument mkAbs.
 myBlog :: UTCTime -> (BlogURL -> String) -> BlogURL -> Application
 myBlog now mkAbs BlogHome _request =
   return $ Response Status200 h $ Right c
@@ -56,7 +67,9 @@ myBlog now mkAbs (BlogPost title) _request =
                 , show now
                 ]
 
--- the SiteURL route handler Application    
+-- the SiteURL route handler Application
+-- In this version, the function for converting the URL type to its
+-- String representation is passed in as the argument mkAbs.
 mySite :: UTCTime -> (SiteURL -> String) -> SiteURL -> Application
 mySite _now mkAbs MyHome _request = 
   return $ Response Status200 h $ Right c
@@ -66,127 +79,119 @@ mySite _now mkAbs MyHome _request =
 mySite now mkAbs (MyBlog blogURL) request =
         myBlog now (mkAbs . MyBlog) blogURL request
 
--- example using of using just handleWai
+-- example using of using just handleWai_
 main1 :: IO ()
 main1 =
   do now <- getCurrentTime
-     let fromAbs str = maybeRead' (decodeUrl . drop 1 $ str) ("Failed to parse as url: " ++ str)
-         mkAbs       = (encodeUrl . show)
-     run 3000 $ handleWai mkAbs fromAbs (mySite now) "http://localhost:3000"
-
-instance AsURL String where
-  toURLS = showString
-  fromURLC = next
-
-$(deriveAsURL ''BlogURL)
-$(deriveAsURL ''SiteURL)
-
-main1b :: IO ()
-main1b =
-  do now <- getCurrentTime
-     run 3000 $ handleWaiU (mySite now) "http://localhost:3000"
+     let fromAbs str =
+           case decodePathInfo str of
+             ["",p] -> maybeRead' p ("Failed to parse as url: " ++ str) 
+             _ -> Failure ["Failed to parse as url: " ++ str]
+         mkAbs s     = encodePathInfo ["", show s]
+     run 3000 $ handleWai_ mkAbs fromAbs "http://localhost:3000/" (mySite now) 
      
-main1c :: IO ()
-main1c =
-  do now <- getCurrentTime
-     run 3000 $ handleWai toSiteURL (fromURLP pSiteURL) (mySite now) "http://localhost:3000"
-       where
-         pBlogURL :: Parser BlogURL
-         pBlogURL = 
-           do char '/'
-              (BlogPost <$> many1 (noneOf "/")) <|> pure BlogHome
-         pSiteURL :: Parser SiteURL
-         pSiteURL =
-           do char '/'
-              MyBlog <$> (string "blog" *> pBlogURL) <|> pure MyHome
-         
-         toBlogURL :: BlogURL -> String
-         toBlogURL BlogHome         = ""
-         toBlogURL (BlogPost title) = title
-         
-         toSiteURL :: SiteURL -> String
-         toSiteURL MyHome           = ""
-         toSiteURL (MyBlog blogURL) = "blog/" </> (toBlogURL blogURL)
-
+-- we can neatly wrap up the handler with it's mkAbs / fromAbs functions like this:     
      
--- we can also use Dispatch
+mySiteSpec :: UTCTime -> Site SiteURL String Application
+mySiteSpec now =     
+  Site { handleLink = mySite now
+       , defaultPage = MyHome
+       , formatLink = \url -> encodePathInfo ["", show url]
+       , parseLink = \str ->
+         case decodePathInfo str of
+             ["",p] -> maybeRead' p ("Failed to parse as url: " ++ str) 
+             _ -> Failure ["Failed to parse as url: " ++ str]
+       }
 
--- first we create a new type to represent the extra arguments to myBlog
-data BlogArgs 
-  = BlogArgs UTCTime
-  deriving (Eq, Ord, Read, Show)
+-- and call it like this:
 
--- then we add a class instance that says when we apply 'dispatch' to
--- 'BlogArgs' that we want to call the myBlogD function. It also says
--- that the myBlogD function will take a BlogURL as the route argument
--- that it will return an Application. (Instead of a ServerPartT or
--- some other web monad).
-instance Dispatch BlogArgs where
-  type Routes BlogArgs = BlogURL
-  type App BlogArgs    = Application
-  dispatch             = myBlogD
+mainSite :: IO ()
+mainSite =
+  do now <- getCurrentTime
+     let siteSpec = mySiteSpec now
+     run 3000 $ waiSite siteSpec "http://localhost:3000/"
+     
+-- We can also use PathInfo to record the way to convert a url to path
+-- segments and back. 
+     
+-- Here we use TH to derive PathInfo instances     
 
--- the BlogURL route handler Application.
+$(derivePathInfo ''BlogURL)
+
+-- instead of using template haskell to generate to PathInfo
+-- instances, we could use the URLT.Regular
+-- alas we can only have on PathInfo instance at a time for UserRoute     
+
+
+$(deriveAll ''SiteURL "PFSiteURL")
+type instance PF SiteURL = PFSiteURL
+
+instance PathInfo SiteURL where
+  toPathSegments   = gtoPathSegments . from
+  fromPathSegments = fmap (fmap to) gfromPathSegments
+
+-- and we can use them easily like this:
+mainPathInfo :: IO ()
+mainPathInfo =
+  do now <- getCurrentTime
+     run 3000 $ handleWai "http://localhost:3000" (mySite now)
+     
+-- we can test the the functions in PathInfo are inverses using pathInfoInverse_prop
+     
+instance Arbitrary BlogURL where
+  arbitrary = oneof [ pure BlogHome
+                    , BlogPost <$> arbitrary
+                    ]
+     
+instance Arbitrary SiteURL where              
+  arbitrary = oneof [ pure MyHome
+                    , MyBlog <$> arbitrary
+                    ]
+     
+mainProp :: IO ()     
+mainProp = quickCheck (pathInfoInverse_prop :: (SiteURL -> Bool))
+
+-- Instead of passing the mkAbs function around manually, we can use
+-- the URLT monad transformer
+
+-- the BlogURL route handler Application
 --
--- This is exactly the same as myBlog except that it takes BlogArgs
--- instead of UTCTime, and we have to unwrap the BlogArgs constructor.
-myBlogD :: BlogArgs -> (BlogURL -> String) -> BlogURL -> Application
-myBlogD (BlogArgs now) mkAbs BlogHome _request =
-  return $ Response Status200 h $ Right c
+-- In this version, the function for converting the URL type to its
+-- String representation is passed in as the argument mkAbs.
+myBlogM :: UTCTime -> BlogURL -> (Request -> URLT BlogURL IO Response)
+myBlogM now BlogHome _request =
+  do postURL <- showURL $ BlogPost "hello-world"
+     return $ Response Status200 h $ Right (c postURL)
     where
       h = [(ContentType, S.pack "text/html")]
-      c = fromLBS $ L.pack $ renderHtml $ page (anchor ! [ href (mkAbs $ BlogPost "hello-world")] << (toHtml "hello-world"))
-myBlogD (BlogArgs now) mkAbs (BlogPost title) _request =
-     return $ Response Status200 h $ Right c
+      c postURL = fromLBS $ L.pack $ renderHtml $ page (anchor ! [ href postURL] << (toHtml "hello-world"))
+
+myBlogM now (BlogPost title) _request =
+  do postURL <- showURL $ BlogPost "hello-world"
+     return $ Response Status200 h $ Right (c postURL)
       where
         h = [(ContentType, S.pack "text/plain")]
-        c = fromLBS $ L.pack $ unlines
-                [ mkAbs BlogHome
-                , title
-                , show now
-                ]
-                
-data SiteArgs = SiteArgs BlogArgs
-
-instance Dispatch SiteArgs where
-  type Routes SiteArgs = SiteURL
-  type App SiteArgs    = Application
-  dispatch             = mySiteD
+        c postURL 
+          = fromLBS $ L.pack $ unlines
+            [ postURL
+            , title
+            , show now
+            ]
 
 -- the SiteURL route handler Application
---
--- this is the same as mySite except we unwrap blogArgs from SiteArgs
--- instead of passing the UTCTime value directly.
-mySiteD :: SiteArgs -> (SiteURL -> String) -> SiteURL -> Application  
-mySiteD _args mkAbs MyHome _request = 
-  return $ Response Status200 h $ Right c
+-- In this version, the function for converting the URL type to its
+-- String representation is passed in as the argument mkAbs.
+mySiteM :: UTCTime -> SiteURL -> (Request -> URLT SiteURL IO Response)
+mySiteM _now MyHome _request = 
+  do postURL <- showURL (MyBlog $ BlogPost "hello-world")
+     return $ Response Status200 h $ Right (c postURL)
       where
         h = [(ContentType, S.pack "text/html")]
-        c = fromLBS $ L.pack $ renderHtml $ page (anchor ! [ href (mkAbs $ MyBlog $ BlogPost "hello-world")] << (toHtml "hello-world"))
-mySiteD (SiteArgs blogArgs) mkAbs (MyBlog blogURL) request =
-        myBlogD blogArgs (mkAbs . MyBlog) blogURL request
-                
--- example using of using just handleWai
--- this is the same as main1 except we replaced:
--- 
--- (mySite now)
---
--- with
---
--- (dispatch (SiteArgs (BlogArgs now)))
-main2 :: IO ()
-main2 =
-  do now <- getCurrentTime
-     let fromAbs str = maybeRead' (decodeUrl . drop 1 $ str) ("Failed to parse as url: " ++ str)
-         mkAbs       = (encodeUrl . show)
-     run 3000 $ handleWai mkAbs fromAbs (dispatch (SiteArgs (BlogArgs now))) "http://localhost:3000"
+        c postURL = fromLBS $ L.pack $ renderHtml $ page (anchor ! [ href postURL] << (toHtml "hello-world"))
+mySiteM now (MyBlog blogURL) request =
+        nestURL MyBlog $ myBlogM now blogURL request
 
-main2b :: IO ()
-main2b =
+mainURLT :: IO ()
+mainURLT =
   do now <- getCurrentTime
-     run 3000 $ handleWaiD (SiteArgs (BlogArgs now)) "http://localhost:3000"
-     
-main2c :: IO ()     
-main2c =
-  do now <- getCurrentTime
-     run 3000 $ handleWaiU (mySiteD (SiteArgs (BlogArgs now))) "http://localhost:3000"
+     run 3000 $ handleWaiURLT "http://localhost:3000" (mySiteM now)

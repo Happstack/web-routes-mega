@@ -10,5 +10,5 @@ class Dispatch a where
   type App a
   dispatch :: a -> (Routes a -> String) -> Routes a -> (App a)
 
-handleWaiD :: (Dispatch a, PathInfo (Routes a), App a ~ Application) => a -> String -> Application
-handleWaiD args approot = handleWai (dispatch args) approot
+handleWaiD :: (Dispatch a, PathInfo (Routes a), App a ~ Application) => String -> a -> Application
+handleWaiD approot args = handleWai approot (dispatch args) 

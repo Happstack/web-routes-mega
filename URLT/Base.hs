@@ -11,7 +11,10 @@
 --
 -- Declaration of common URLT functions
 -----------------------------------------------------------------------------
-module URLT.Base where
+module URLT.Base 
+       ( decodePathInfo
+       , encodePathInfo
+       ) where
 
 import Control.Applicative.Error
 import Codec.Binary.UTF8.String (encodeString, decodeString)
@@ -223,7 +226,7 @@ encodePathInfo =
       o :: (a -> b) -> (b -> c) -> a -> c
       o = flip (.)
 
-decodePathInfo :: String -> [String]     
+decodePathInfo :: String -> [String]
 decodePathInfo =
   splitPaths   `o` -- split path on delimiters
   map unEscapeString `o` -- decode any percent encoded characters
