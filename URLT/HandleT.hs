@@ -2,7 +2,7 @@ module URLT.HandleT where
 
 import Control.Applicative.Error(Failing(Failure, Success))
 import Control.Monad.Reader (ReaderT(runReaderT))
-import URLT.Base (URLT, Link, runURLT)
+import URLT.Monad (URLT, Link, runURLT)
 
 data Site link url m a
     = Site { handleLink  :: link -> URLT link m a

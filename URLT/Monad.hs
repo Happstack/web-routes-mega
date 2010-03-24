@@ -11,7 +11,7 @@
 --
 -- Declaration of the 'URLT' monad transformer
 -----------------------------------------------------------------------------
-module URLT.Base where
+module URLT.Monad where
 
 import Control.Applicative
 import Control.Monad (MonadPlus(mzero, mplus))

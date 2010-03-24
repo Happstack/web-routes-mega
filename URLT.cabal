@@ -12,7 +12,7 @@ Cabal-Version:    >= 1.6
 Build-type:       Simple
 
 Library
-        Build-Depends:    base >= 4 && < 5, mtl, Consumer, template-haskell, happstack-server, QuickCheck >= 2 && < 3, hsx, hsp, applicative-extras, regular, wai, bytestring, transformers, parsec
+        Build-Depends:    base >= 4 && < 5, mtl, Consumer, template-haskell, happstack-server, QuickCheck >= 2 && < 3, hsx, hsp, applicative-extras, regular, wai, bytestring, transformers, network, utf8-string
         Exposed-Modules:  URLT
                           URLT.Base
                           URLT.Dispatch
@@ -20,7 +20,6 @@ Library
                           URLT.Happstack
                           URLT.Monad
                           URLT.MTL
-                          URLT.Parsec
                           URLT.PathInfo
                           URLT.QuickCheck
                           URLT.Regular

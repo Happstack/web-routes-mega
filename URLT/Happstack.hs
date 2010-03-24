@@ -5,7 +5,7 @@ import Control.Applicative.Error (Failing(Failure, Success))
 import Control.Monad (MonadPlus(mzero))
 import Data.List (intersperse)
 import Happstack.Server (FilterMonad(..), ServerMonad(..), WebMonad(..), ServerPartT, Response, Request(rqPaths), ToMessage(..), dir, runServerPartT, withRequest)
-import URLT.Base (URLT(URLT), Link, liftURLT, mapURLT)
+import URLT.Monad (URLT(URLT), Link, liftURLT, mapURLT)
 import URLT.MTL
 import URLT.HandleT (Site, runSite)
 

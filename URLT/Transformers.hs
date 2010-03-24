@@ -6,7 +6,7 @@ import Control.Monad (MonadPlus)
 import Control.Monad.Fix (MonadFix)
 import "transformers" Control.Monad.Trans (MonadTrans(lift), MonadIO(liftIO))
 import HSX.XMLGenerator (XMLGenT(..))
-import URLT.Base
+import URLT.Monad
 
 instance MonadTrans (URLT url) where
   lift = liftURLT
