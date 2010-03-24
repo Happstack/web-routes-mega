@@ -34,6 +34,18 @@ instance (GToURL f, GToURL g) => GToURL (f :+: g) where
                         case g c of
                           r@(Success a, _) -> r
                           (Failure errs2, _) -> (Failure (errs1 ++ errs2), c)
+                          
+instance (GToURL f, GToURL g) => GToURL (f :*: g) where
+  gtoPathSegments (x :*: y) = gtoPathSegments x ++ gtoPathSegments y
+  gfromPathSegments =
+    do x' <- gfromPathSegments :: Consumer String (Failing (f a))
+       case x' of
+         (Failure err) -> return (Failure err)
+         (Success x) -> 
+           do y' <- gfromPathSegments
+              case y' of
+                (Failure err) -> return (Failure err)
+                (Success y) -> return (Success (x :*: y))
 
 instance GToURL U where
   gtoPathSegments U = []
