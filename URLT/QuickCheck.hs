@@ -1,10 +1,10 @@
 module URLT.QuickCheck where
 
 import Control.Applicative.Error (Failing(Success))
-import URLT.AsURL (AsURL(toURLS), fromURL)
+import URLT.PathInfo (PathInfo, toPathInfo, fromPathInfo)
 
-asURLInverse_prop :: (Eq url, AsURL url) => url -> Bool
+asURLInverse_prop :: (Eq url, PathInfo url) => url -> Bool
 asURLInverse_prop url =
-    case (fromURL $ toURLS url "") of
+    case (fromPathInfo $ toPathInfo url) of
       Success url' -> url == url'
       _ -> False
