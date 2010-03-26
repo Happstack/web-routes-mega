@@ -6,15 +6,27 @@ import Control.Monad.Consumer (Consumer(Consumer), runConsumer, next)
 import Control.Monad (msum)
 import Data.List (stripPrefix, tails)
 import Data.Maybe (fromJust)
-import Web.Routes.Base (decodePathInfo, encodePathInfo)
+import URLT.Base (decodePathInfo, encodePathInfo)
 
 -- this is not very efficient. Among other things, we need only consider the last 'n' characters of x where n == length y.
 stripOverlap :: (Eq a) => [a] -> [a] -> [a]
 stripOverlap x y = fromJust $ msum $ [ stripPrefix p y | p <- tails x]
 
+type URLParser a = GenParser String () a
+
+segment :: String -> URLParser String
+segment x = pToken (const x) (\y -> if x == y then Just x else Nothing)
+
+
+anySegment :: URLParser String
+anySegment = pToken (const "any string") Just
+
+pToken msg f = do pos <- getPosition
+                  token id (const pos) f
+
 class PathInfo a where
   toPathSegments :: a -> [String]
-  fromPathSegments :: Consumer String (Failing a)
+  fromPathSegments :: URLParser a
 
 toPathInfo :: (PathInfo u) => u -> String
 toPathInfo = ('/' :) . encodePathInfo . toPathSegments
@@ -32,37 +44,31 @@ toPathInfo = ('/' :) . encodePathInfo . toPathSegments
 --
 -- However, if the pathInfo was prepend with http://example.org/ with
 -- a trailing slash, then things might not line up.
-fromPathInfo :: (Show u, PathInfo u) => String -> Failing u
-fromPathInfo pi = 
-  case runConsumer (decodePathInfo $ dropSlash pi) fromPathSegments of
-    (Success url, []) -> Success url
-    (Success url, junk) -> Failure ["Parsed as '" ++ show url ++ "' but had leftover path segments: " ++ show junk]
-    (Failure errs, _) -> Failure errs
+fromPathInfo :: (PathInfo u) => String -> Failing u
+fromPathInfo pi = fst $ runConsumer (decodePathInfo $ dropSlash pi) fromPathSegments 
   where
     dropSlash ('/':rs) = rs
     dropSlash x        = x
+
+showParseError = showErrorMessages "or" "unknown parse error" 
+                                   "expecting" "unexpected" "end of input"
+                                   . errorMessages
+
 
 -- it's instances all the way down
 
 instance PathInfo [String] where  
   toPathSegments = id
-  fromPathSegments = Consumer $ \c -> (Success c, [])
+  fromPathSegments = many anySegment
   
 instance PathInfo String where
   toPathSegments = (:[])
-  fromPathSegments = 
-    do mStr <- next
-       case mStr of
-         Nothing    -> return $ Failure ["Expected a String but get end of input."]
-         (Just str) -> return $ Success str
+  fromPathSegments = anySegment
   
 instance PathInfo Int where  
   toPathSegments i = [show i]
-  fromPathSegments =
-    do mStr <- next
-       case mStr of
-         Nothing -> return $ Failure ["Expected an Int but got end of input."]
-         (Just str) ->
+  fromPathSegments = pToken (const "integer") checkInt
+   where checkInt str = 
            case reads str of
-             [(n,[])] -> return (Success n)
-             _ -> return $ Failure ["Expected an Int but got '" ++ str ++"'"]
+             [(n,[])] -> Just n
+             _ ->        Nothing
