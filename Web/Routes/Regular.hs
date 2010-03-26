@@ -6,7 +6,9 @@ import Control.Applicative.Error (Failing(Failure, Success))
 import Control.Monad.Consumer (Consumer(Consumer), next, runConsumer)
 import Data.Char (toLower)
 import Generics.Regular
-import URLT.PathInfo (PathInfo(fromPathSegments, toPathSegments))
+import Text.ParserCombinators.Parsec.Prim
+import Text.ParserCombinators.Parsec.Combinator
+import Web.Routes.PathInfo (PathInfo(fromPathSegments, toPathSegments), URLParser, segment)
 
 class GToURL f where
    gtoPathSegments   :: f a -> [String]

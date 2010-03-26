@@ -6,7 +6,10 @@ import Control.Monad.Consumer (Consumer(Consumer), runConsumer, next)
 import Control.Monad (msum)
 import Data.List (stripPrefix, tails)
 import Data.Maybe (fromJust)
-import URLT.Base (decodePathInfo, encodePathInfo)
+import Text.ParserCombinators.Parsec.Prim
+import Text.ParserCombinators.Parsec.Error
+import Text.ParserCombinators.Parsec.Char
+import Web.Routes.Base (decodePathInfo, encodePathInfo)
 
 -- this is not very efficient. Among other things, we need only consider the last 'n' characters of x where n == length y.
 stripOverlap :: (Eq a) => [a] -> [a] -> [a]
@@ -17,12 +20,18 @@ type URLParser a = GenParser String () a
 segment :: String -> URLParser String
 segment x = pToken (const x) (\y -> if x == y then Just x else Nothing)
 
-
 anySegment :: URLParser String
 anySegment = pToken (const "any string") Just
 
 pToken msg f = do pos <- getPosition
                   token id (const pos) f
+                  
+                  
+-- c2s :: GenParser Char () a -> GenParser String () a
+-- c2s 
+-- foo :: URLParser Char
+-- foo = anyChar
+
 
 class PathInfo a where
   toPathSegments :: a -> [String]
@@ -45,7 +54,9 @@ toPathInfo = ('/' :) . encodePathInfo . toPathSegments
 -- However, if the pathInfo was prepend with http://example.org/ with
 -- a trailing slash, then things might not line up.
 fromPathInfo :: (PathInfo u) => String -> Failing u
-fromPathInfo pi = fst $ runConsumer (decodePathInfo $ dropSlash pi) fromPathSegments 
+fromPathInfo pi = case parse fromPathSegments "" (decodePathInfo $ dropSlash pi) of
+                       Left err -> Failure [showParseError err]
+                       Right x  -> Success x
   where
     dropSlash ('/':rs) = rs
     dropSlash x        = x
