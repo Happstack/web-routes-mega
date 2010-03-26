@@ -1,7 +1,7 @@
-module URLT.Parsec where
+module Web.Routes.Parsec where
 
 import Control.Applicative.Error(Failing(Failure,Success))
-import URLT.AsURL
+import Web.Routes.AsURL
 import Text.Parsec (runParser)
 import Text.Parsec.String (Parser)
 

@@ -1,13 +1,13 @@
-module URLT.Wai where
+module Web.Routes.Wai where
 
 import Control.Applicative.Error
 import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
 import Network.Wai
 import Network.Wai.Enumerator
-import URLT.PathInfo 
-import URLT.HandleT
-import URLT.Monad (URLT, runURLT)
+import Web.Routes.PathInfo 
+import Web.Routes.HandleT
+import Web.Routes.Monad (RouteT, runRouteT)
 
 handleWai_ :: (url -> String) -> (String -> Failing url) -> String -> ((url -> String) -> url -> Application) -> Application
 handleWai_ fromUrl toUrl approot handler =
@@ -36,12 +36,12 @@ handleWai_2 fromUrl toUrl approot handler =
 handleWai :: (PathInfo url) => String -> ((url -> String) -> url -> Application) -> Application
 handleWai approot handler = handleWai_ toPathInfo fromPathInfo approot handler
 
-handleWaiURLT_ :: (url -> String) -> (String -> Failing url) -> String -> (url -> Request -> URLT url IO Response) -> Application
-handleWaiURLT_  toPathInfo fromPathInfo approot handler =
-   handleWai_ toPathInfo fromPathInfo approot (\toPathInfo' url request -> runURLT (handler url request) toPathInfo') 
+handleWaiRouteT_ :: (url -> String) -> (String -> Failing url) -> String -> (url -> Request -> RouteT url IO Response) -> Application
+handleWaiRouteT_  toPathInfo fromPathInfo approot handler =
+   handleWai_ toPathInfo fromPathInfo approot (\toPathInfo' url request -> runRouteT (handler url request) toPathInfo') 
 
-handleWaiURLT :: (PathInfo url) => String -> (url -> Request -> URLT url IO Response) -> Application
-handleWaiURLT approot handler = handleWaiURLT_ toPathInfo fromPathInfo approot handler
+handleWaiRouteT :: (PathInfo url) => String -> (url -> Request -> RouteT url IO Response) -> Application
+handleWaiRouteT approot handler = handleWaiRouteT_ toPathInfo fromPathInfo approot handler
 
 waiSite :: Site url String Application -> String -> Application
 waiSite site approot = handleWai_ (formatLink site) (withDefault site) approot (handleLink site) 

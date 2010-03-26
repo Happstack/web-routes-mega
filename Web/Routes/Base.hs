@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, TypeFamilies, PackageImports, FlexibleContexts, UndecidableInstances #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  URLT.Base
+-- Module      :  Web.Routes.Base
 -- Copyright   :  (c) 2010 Jeremy Shaw
 -- License     :  BSD-style (see the file LICENSE)
 --
@@ -9,9 +9,9 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Declaration of common URLT functions
+-- Declaration of common RouteT functions
 -----------------------------------------------------------------------------
-module URLT.Base 
+module Web.Routes.Base 
        ( decodePathInfo
        , encodePathInfo
        ) where

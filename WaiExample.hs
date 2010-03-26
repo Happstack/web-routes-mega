@@ -8,18 +8,18 @@ import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
 import Data.Time (UTCTime, getCurrentTime)
 import Generics.Regular
-import URLT.Wai
+import Web.Routes.Wai
 import Network.Wai 
 import Network.Wai.Enumerator
 import Network.Wai.Handler.SimpleServer (run)
 import Text.Html ((!), (<<), (+++), Html, anchor, body, href, toHtml, renderHtml, header, thetitle)
-import URLT.Base
-import URLT.PathInfo
-import URLT.TH
-import URLT.HandleT
-import URLT.Monad
-import URLT.Regular
-import URLT.QuickCheck
+import Web.Routes.Base
+import Web.Routes.PathInfo
+import Web.Routes.TH
+import Web.Routes.HandleT
+import Web.Routes.Monad
+import Web.Routes.Regular
+import Web.Routes.QuickCheck
 import Test.QuickCheck (Arbitrary(..), oneof, quickCheck)
 import Text.Parsec ((<|>),many1)
 import Text.Parsec.Char(char, noneOf, string)
@@ -119,7 +119,7 @@ mainSite =
 $(derivePathInfo ''BlogURL)
 
 -- instead of using template haskell to generate to PathInfo
--- instances, we could use the URLT.Regular
+-- instances, we could use the RouteT.Regular
 -- alas we can only have on PathInfo instance at a time for UserRoute     
 
 
@@ -152,13 +152,13 @@ mainProp :: IO ()
 mainProp = quickCheck (pathInfoInverse_prop :: (SiteURL -> Bool))
 
 -- Instead of passing the mkAbs function around manually, we can use
--- the URLT monad transformer
+-- the RouteT monad transformer
 
 -- the BlogURL route handler Application
 --
 -- In this version, the function for converting the URL type to its
 -- String representation is passed in as the argument mkAbs.
-myBlogM :: UTCTime -> BlogURL -> (Request -> URLT BlogURL IO Response)
+myBlogM :: UTCTime -> BlogURL -> (Request -> RouteT BlogURL IO Response)
 myBlogM now BlogHome _request =
   do postURL <- showURL $ BlogPost "hello-world"
      return $ Response Status200 h $ Right (c postURL)
@@ -181,7 +181,7 @@ myBlogM now (BlogPost title) _request =
 -- the SiteURL route handler Application
 -- In this version, the function for converting the URL type to its
 -- String representation is passed in as the argument mkAbs.
-mySiteM :: UTCTime -> SiteURL -> (Request -> URLT SiteURL IO Response)
+mySiteM :: UTCTime -> SiteURL -> (Request -> RouteT SiteURL IO Response)
 mySiteM _now MyHome _request = 
   do postURL <- showURL (MyBlog $ BlogPost "hello-world")
      return $ Response Status200 h $ Right (c postURL)
@@ -191,7 +191,7 @@ mySiteM _now MyHome _request =
 mySiteM now (MyBlog blogURL) request =
         nestURL MyBlog $ myBlogM now blogURL request
 
-mainURLT :: IO ()
-mainURLT =
+mainRouteT :: IO ()
+mainRouteT =
   do now <- getCurrentTime
-     run 3000 $ handleWaiURLT "http://localhost:3000" (mySiteM now)
+     run 3000 $ handleWaiRouteT "http://localhost:3000" (mySiteM now)

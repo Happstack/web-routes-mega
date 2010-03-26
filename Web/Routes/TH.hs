@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP, TemplateHaskell #-}
 {-# OPTIONS_GHC -optP-include -optPdist/build/autogen/cabal_macros.h #-}
-module URLT.TH where
+module Web.Routes.TH where
 
 import Control.Applicative (Applicative((<*>)))
 import Control.Applicative.Error (Failing(Failure, Success))
@@ -8,7 +8,7 @@ import Control.Monad (replicateM)
 import Data.List (intercalate)
 import Language.Haskell.TH
 import Control.Monad.Consumer (Consumer, next, runConsumer)
-import URLT.PathInfo
+import Web.Routes.PathInfo
 
 
 -- FIXME: handle unexpected end of input

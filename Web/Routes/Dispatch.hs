@@ -1,9 +1,9 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
-module URLT.Dispatch where
+module Web.Routes.Dispatch where
 
 import Network.Wai
-import URLT.PathInfo
-import URLT.Wai
+import Web.Routes.PathInfo
+import Web.Routes.Wai
 
 class Dispatch a where
   type Routes a

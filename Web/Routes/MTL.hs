@@ -1,11 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, TypeFamilies, PackageImports #-}
-module URLT.MTL where
+module Web.Routes.MTL where
 
 import "mtl" Control.Monad.Trans (MonadTrans(lift), MonadIO(liftIO))
-import URLT.Monad (URLT, liftURLT)
+import Web.Routes.Monad (RouteT, liftRouteT)
 
-instance MonadTrans (URLT url) where
-  lift = liftURLT
+instance MonadTrans (RouteT url) where
+  lift = liftRouteT
   
-instance (MonadIO m) => MonadIO (URLT url m) where  
+instance (MonadIO m) => MonadIO (RouteT url m) where  
   liftIO = lift . liftIO

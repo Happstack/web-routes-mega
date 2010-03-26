@@ -1,9 +1,9 @@
-module URLT.HandleT where
+module Web.Routes.HandleT where
 
 import Control.Applicative.Error(Failing(Failure, Success))
 import Control.Monad.Reader (ReaderT(runReaderT))
 import Data.Monoid (Monoid(mempty, mappend))
-import URLT.Monad (URLT, runURLT)
+import Web.Routes.Monad (RouteT, runRouteT)
 
 data Site url pathInfo a
     = Site { handleLink  :: (url -> pathInfo) -> url -> a
@@ -30,7 +30,7 @@ runSite approot site pathInfo =
     in
       case fLink of
         (Failure errs) -> return (Failure errs)
-        (Success lnk) -> return . Success =<< runURLT ((handleLink site) lnk) ((approot ++) . (formatLink site))                         
+        (Success lnk) -> return . Success =<< runRouteT ((handleLink site) lnk) ((approot ++) . (formatLink site))                         
 -}
 
 
@@ -56,7 +56,7 @@ runSite approot site linkStr =
         (Success lnk) -> Success $ (handleLink site) ((approot ++) . (formatLink site)) lnk
 -}
 --         (Success lnk) -> (handleLink site) ((approot ++) . (formatLink site)) lnk
---        (Success lnk) -> return . Success =<< runURLT ((handleLink site) lnk) ((approot ++) . (formatLink site))
+--        (Success lnk) -> return . Success =<< runRouteT ((handleLink site) lnk) ((approot ++) . (formatLink site))
 
 {-
 runSite :: (Monad m) => String -> Site link Link m a -> Link -> m (Failing a)
@@ -68,5 +68,5 @@ runSite approot site linkStr =
     in
       case fLink of
         (Failure errs) -> return (Failure errs)
-        (Success lnk) -> return . Success =<< runURLT ((handleLink site) lnk) ((approot ++) . (formatLink site))
+        (Success lnk) -> return . Success =<< runRouteT ((handleLink site) lnk) ((approot ++) . (formatLink site))
 -}
