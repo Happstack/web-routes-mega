@@ -1,13 +1,12 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
 module URLT.PathInfo where
 
-import Control.Applicative
 import Control.Applicative.Error (Failing(Failure, Success))
 import Control.Monad.Consumer (Consumer(Consumer), runConsumer, next)
 import Control.Monad (msum)
-import Data.List (find, stripPrefix, tails)
-import Data.Maybe (fromJust, isJust)
-import URLT.Base
+import Data.List (stripPrefix, tails)
+import Data.Maybe (fromJust)
+import URLT.Base (decodePathInfo, encodePathInfo)
 
 -- this is not very efficient. Among other things, we need only consider the last 'n' characters of x where n == length y.
 stripOverlap :: (Eq a) => [a] -> [a] -> [a]

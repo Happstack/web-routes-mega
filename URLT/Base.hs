@@ -16,7 +16,6 @@ module URLT.Base
        , encodePathInfo
        ) where
 
-import Control.Applicative.Error
 import Codec.Binary.UTF8.String (encodeString, decodeString)
 import Data.List (intercalate)
 import Network.URI

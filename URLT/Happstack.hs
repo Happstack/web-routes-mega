@@ -1,7 +1,8 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeSynonymInstances, UndecidableInstances, PackageImports #-}
 module URLT.Happstack where
 
-import Control.Applicative.Error (Failing(Failure, Success))
+import Control.Applicative ((<$>))
+import Control.Applicative.Error (Failing(Failure, Success), ErrorMsg)
 import Control.Monad (MonadPlus(mzero))
 import Data.List (intercalate)
 import Happstack.Server (FilterMonad(..), ServerMonad(..), WebMonad(..), ServerPartT, Response, Request(rqPaths), ToMessage(..), dirs, runServerPartT, withRequest)
@@ -21,12 +22,28 @@ instance (FilterMonad a m)=> FilterMonad a (URLT url m) where
 instance (WebMonad a m) => WebMonad a (URLT url m) where
     finishWith = liftURLT . finishWith
 
-implSite :: (Monad m) => String -> FilePath -> Site url String (ServerPartT m a) -> ServerPartT m a
+implSite :: (Functor m, Monad m, MonadPlus m, ServerMonad m) => String -> FilePath -> Site url String (m a) -> m a
 implSite domain approot siteSpec =
+  do r <- implSite_ domain approot siteSpec
+     case r of
+       (Failure _) -> mzero
+       (Success a) -> return a
+
+implSite_ :: (Functor m, Monad m, MonadPlus m, ServerMonad m) => String -> FilePath -> Site url String (m a) -> m (Failing a)
+implSite_ domain approot siteSpec =
     dirs approot $ do rq <- askRq
                       let pathInfo = intercalate "/" (rqPaths rq)
                           f        = runSite (domain ++ approot) siteSpec pathInfo
                       case f of
-                        (Failure _) -> 
-                          mzero
-                        (Success sp) -> localRq (const $ rq { rqPaths = [] }) sp
+                        (Failure errs) -> return (Failure errs)
+                        (Success sp)   -> Success <$> (localRq (const $ rq { rqPaths = [] }) sp)
+{- 
+implSite__ :: (Monad m) => String -> FilePath -> ([ErrorMsg] -> ServerPartT m a) -> Site url String (ServerPartT m a) -> (ServerPartT m a)
+implSite__ domain approot handleError siteSpec =
+    dirs approot $ do rq <- askRq
+                      let pathInfo = intercalate "/" (rqPaths rq)
+                          f        = runSite (domain ++ approot) siteSpec pathInfo
+                      case f of
+                        (Failure errs) -> handleError errs
+                        (Success sp)   -> localRq (const $ rq { rqPaths = [] }) sp
+-}

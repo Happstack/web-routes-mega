@@ -1,12 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, TypeFamilies, PackageImports #-}
 module URLT.Transformers where
 
-import Control.Applicative
-import Control.Monad (MonadPlus)
-import Control.Monad.Fix (MonadFix)
 import "transformers" Control.Monad.Trans (MonadTrans(lift), MonadIO(liftIO))
-import HSX.XMLGenerator (XMLGenT(..))
-import URLT.Monad
+import URLT.Monad(URLT, liftURLT)
 
 instance MonadTrans (URLT url) where
   lift = liftURLT

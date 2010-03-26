@@ -1,10 +1,8 @@
 {-# LANGUAGE TypeOperators, ScopedTypeVariables #-}
 module URLT.Regular where
 
-import Control.Applicative
 import Control.Applicative.Error (Failing(Failure, Success))
 import Control.Monad.Consumer (Consumer(Consumer), next, runConsumer)
-import Control.Monad(MonadPlus(mzero, mplus), ap)
 import Data.Char (toLower)
 import Generics.Regular
 import URLT.PathInfo (PathInfo(fromPathSegments, toPathSegments))
