@@ -32,8 +32,12 @@ toPathInfo = ('/' :) . encodePathInfo . toPathSegments
 --
 -- However, if the pathInfo was prepend with http://example.org/ with
 -- a trailing slash, then things might not line up.
-fromPathInfo :: (PathInfo u) => String -> Failing u
-fromPathInfo pi = fst $ runConsumer (decodePathInfo $ dropSlash pi) fromPathSegments 
+fromPathInfo :: (Show u, PathInfo u) => String -> Failing u
+fromPathInfo pi = 
+  case runConsumer (decodePathInfo $ dropSlash pi) fromPathSegments of
+    (Success url, []) -> Success url
+    (Success url, junk) -> Failure ["Parsed as '" ++ show url ++ "' but had leftover path segments: " ++ show junk]
+    (Failure errs, _) -> Failure errs
   where
     dropSlash ('/':rs) = rs
     dropSlash x        = x
