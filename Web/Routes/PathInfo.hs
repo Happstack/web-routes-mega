@@ -2,13 +2,14 @@
 module Web.Routes.PathInfo where
 
 import Control.Applicative.Error (Failing(Failure, Success))
-import Control.Monad.Consumer (Consumer(Consumer), runConsumer, next)
 import Control.Monad (msum)
 import Data.List (stripPrefix, tails)
 import Data.Maybe (fromJust)
 import Text.ParserCombinators.Parsec.Prim
 import Text.ParserCombinators.Parsec.Error
 import Text.ParserCombinators.Parsec.Char
+import Text.ParserCombinators.Parsec.Pos
+import Text.Parsec.Prim
 import Web.Routes.Base (decodePathInfo, encodePathInfo)
 
 -- this is not very efficient. Among other things, we need only consider the last 'n' characters of x where n == length y.
@@ -24,14 +25,34 @@ anySegment :: URLParser String
 anySegment = pToken (const "any string") Just
 
 pToken msg f = do pos <- getPosition
-                  token id (const pos) f
+                  token id (const $ incSourceLine pos 1) f
                   
-                  
--- c2s :: GenParser Char () a -> GenParser String () a
--- c2s 
--- foo :: URLParser Char
--- foo = anyChar
+p2u :: Parser a -> URLParser a
+p2u p = 
+  mkPT $ \state@(State sInput sPos sUser) -> 
+  case sInput of
+    (s:ss) ->
+       do r <- runParsecT p (State s sPos sUser)
+          return (fmap (fmap (fixReply ss)) r)
 
+    where
+      fixReply :: [String] -> (Reply String u a) -> (Reply [String] u a)
+      fixReply _ (Error err) = (Error err)
+      fixReply ss (Ok a (State "" sPos sUser) e) = (Ok a (State ss sPos sUser) e) 
+      fixReply ss (Ok a (State s sPos sUser) e) = (Ok a (State (s:ss) sPos sUser) e) 
+      
+test = 
+  let segments = ["foo", "hi", "there", "world"] in
+  case parse testp (show segments) segments of
+    (Left e) -> putStrLn $ showParseError e
+    (Right r) -> print r
+  
+testp =  
+  do segment "foo"
+     st <- p2u (char 'h' >> char 'o')
+     sg <- anySegment
+     sg' <- anySegment
+     return (st,sg, sg')
 
 class PathInfo a where
   toPathSegments :: a -> [String]
@@ -61,10 +82,12 @@ fromPathInfo pi = case parse fromPathSegments "" (decodePathInfo $ dropSlash pi)
     dropSlash ('/':rs) = rs
     dropSlash x        = x
 
-showParseError = showErrorMessages "or" "unknown parse error" 
-                                   "expecting" "unexpected" "end of input"
-                                   . errorMessages
-
+showParseError :: ParseError -> String
+showParseError pErr =
+  let pos    = errorPos pErr
+      posMsg = sourceName pos ++ " (segment " ++ show (sourceLine pos) ++ " character " ++ show (sourceColumn pos) ++ "): "
+      msgs   = errorMessages pErr
+  in posMsg ++ showErrorMessages "or" "unknown parse error" "expecting" "unexpected" "end of input" msgs
 
 -- it's instances all the way down
 
