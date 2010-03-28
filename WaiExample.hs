@@ -20,6 +20,7 @@ import Web.Routes.HandleT
 import Web.Routes.Monad
 import Web.Routes.Regular
 import Web.Routes.QuickCheck
+import Text.Parsec.Prim (parse)
 import Test.QuickCheck (Arbitrary(..), oneof, quickCheck)
 import Text.Parsec ((<|>),many1)
 import Text.Parsec.Char(char, noneOf, string)
@@ -127,8 +128,8 @@ $(deriveAll ''SiteURL "PFSiteURL")
 type instance PF SiteURL = PFSiteURL
 
 instance PathInfo SiteURL where
-  toPathSegments   = gtoPathSegments . from
-  fromPathSegments = fmap (fmap to) gfromPathSegments
+  toPathSegments   = gtoPathSegments . from   
+  fromPathSegments = fmap to gfromPathSegments
 
 -- and we can use them easily like this:
 mainPathInfo :: IO ()
@@ -195,3 +196,21 @@ mainRouteT :: IO ()
 mainRouteT =
   do now <- getCurrentTime
      run 3000 $ handleWaiRouteT "http://localhost:3000" (mySiteM now)
+
+
+-- tests for parcec based PathInfo
+      
+test :: IO ()
+test = 
+  let segments = ["foo", "hi", "there", "world"] in
+  case parse testp (show segments) segments of
+    (Left e) -> putStrLn $ showParseError e
+    (Right r) -> print r
+  
+testp :: URLParser (Char, String, String)
+testp =  
+  do segment "foo"
+     st <- p2u (char 'h' >> char 'o')
+     sg <- anySegment
+     sg' <- anySegment
+     return (st,sg, sg')

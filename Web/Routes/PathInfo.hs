@@ -1,15 +1,15 @@
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
 module Web.Routes.PathInfo where
 
+import Control.Applicative (pure, (*>),(<*>))
 import Control.Applicative.Error (Failing(Failure, Success))
 import Control.Monad (msum)
 import Data.List (stripPrefix, tails)
 import Data.Maybe (fromJust)
-import Text.ParserCombinators.Parsec.Prim
-import Text.ParserCombinators.Parsec.Error
-import Text.ParserCombinators.Parsec.Char
-import Text.ParserCombinators.Parsec.Pos
-import Text.Parsec.Prim
+import Text.ParserCombinators.Parsec.Prim (GenParser, Parser)
+import Text.ParserCombinators.Parsec.Error (ParseError, errorPos, errorMessages, showErrorMessages)
+import Text.ParserCombinators.Parsec.Pos (incSourceLine, sourceName, sourceLine, sourceColumn)
+import Text.Parsec.Prim (State(..), Reply(..), mkPT, runParsecT, getPosition, token, parse, many)
 import Web.Routes.Base (decodePathInfo, encodePathInfo)
 
 -- this is not very efficient. Among other things, we need only consider the last 'n' characters of x where n == length y.
@@ -40,19 +40,6 @@ p2u p =
       fixReply _ (Error err) = (Error err)
       fixReply ss (Ok a (State "" sPos sUser) e) = (Ok a (State ss sPos sUser) e) 
       fixReply ss (Ok a (State s sPos sUser) e) = (Ok a (State (s:ss) sPos sUser) e) 
-      
-test = 
-  let segments = ["foo", "hi", "there", "world"] in
-  case parse testp (show segments) segments of
-    (Left e) -> putStrLn $ showParseError e
-    (Right r) -> print r
-  
-testp =  
-  do segment "foo"
-     st <- p2u (char 'h' >> char 'o')
-     sg <- anySegment
-     sg' <- anySegment
-     return (st,sg, sg')
 
 class PathInfo a where
   toPathSegments :: a -> [String]
@@ -75,7 +62,9 @@ toPathInfo = ('/' :) . encodePathInfo . toPathSegments
 -- However, if the pathInfo was prepend with http://example.org/ with
 -- a trailing slash, then things might not line up.
 fromPathInfo :: (PathInfo u) => String -> Failing u
-fromPathInfo pi = case parse fromPathSegments "" (decodePathInfo $ dropSlash pi) of
+fromPathInfo pi = 
+  let segments = (decodePathInfo $ dropSlash pi) 
+  in case parse fromPathSegments (show segments) segments  of
                        Left err -> Failure [showParseError err]
                        Right x  -> Success x
   where

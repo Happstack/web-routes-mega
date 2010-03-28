@@ -23,7 +23,7 @@ Library
                           Web.Routes.PathInfo
                           Web.Routes.QuickCheck
                           Web.Routes.Regular
---                          Web.Routes.TH
+                          Web.Routes.TH
                           Web.Routes.Transformers
                           Web.Routes.XMLGenT
                           Web.Routes.Wai

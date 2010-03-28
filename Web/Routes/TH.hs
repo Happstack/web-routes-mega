@@ -2,12 +2,12 @@
 {-# OPTIONS_GHC -optP-include -optPdist/build/autogen/cabal_macros.h #-}
 module Web.Routes.TH where
 
-import Control.Applicative (Applicative((<*>)))
+import Control.Applicative (Applicative(pure, (<*>), (*>)))
 import Control.Applicative.Error (Failing(Failure, Success))
 import Control.Monad (replicateM)
 import Data.List (intercalate)
 import Language.Haskell.TH
-import Control.Monad.Consumer (Consumer, next, runConsumer)
+import Text.Parsec ((<|>),many1)
 import Web.Routes.PathInfo
 
 
@@ -47,35 +47,19 @@ derivePathInfo name
                funD 'toPathSegments [clause [varP inp] (normalB body)  []]
       fromPathSegmentsFn :: [(Name,Int)] -> DecQ
       fromPathSegmentsFn cons
-          = do let body = 
-                       do c <- newName "c"
-                          doE [ bindS (varP c) (varE 'next)
-                              , noBindS $ caseE (varE c)
-                                        ([ do args <- replicateM nArgs (newName "arg")
-                                              match (conP (mkName "Just") [litP $ stringL (nameBase conName) ])
-                                                       (normalB (fromURLWork conName args)) []
-                                          | (conName, nArgs) <- cons
-                                        ] ++ 
-                                        [ do str <- newName "str"
-                                             let conNames = map (nameBase . fst) cons
-                                             match (conP (mkName "Just") [varP str]) (normalB [| return (Failure ["Got '" ++ $(varE str) ++ "' expecting one of " ++ intercalate ", " conNames ]) |]) []
-                                        , match (conP (mkName "Nothing") []) (normalB  [| return (Failure ["Unexpected end of input."]) |]) []
-                                        ])
-                                
-                              ]
-                   fromURLWork :: Name -> [Name] -> ExpQ
-                   fromURLWork conName args
-                       = doE $ [ bindS (varP arg) [| fromPathSegments |] | arg <- args ] ++
-                               [ noBindS [| return $(foldl (\a b -> appE (appE [| (<*>) |] a) b)  (appE [| Success |] (conE conName)) (map varE args)) |] ]
+          = do let body = (foldl1 (\a b -> appE (appE [| (<|>) |] a) b)
+                            [ parseCon conName nArgs 
+                            | (conName, nArgs) <- cons])
+                   parseCon :: Name -> Int -> ExpQ
+                   parseCon conName nArgs = foldr1 (\a b -> appE (appE [| (<*>) |] a) b) 
+                                                   ([| segment $(stringE (nameBase conName)) *> pure $(conE conName) |]
+                                                   : (replicate nArgs [| fromPathSegments |]))
                funD 'fromPathSegments [clause [] (normalB body) []]
-
 
 mkType :: Name -> [TypeQ] -> TypeQ
 mkType con = foldl appT (conT con)
 
-
 data Class = Tagged [(Name, Int)] Cxt [Name]
-
 
 parseInfo :: Name -> Q Class
 parseInfo name
