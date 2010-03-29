@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP, TemplateHaskell #-}
-{-# OPTIONS_GHC -optP-include -optPdist/build/autogen/cabal_macros.h #-}
+{- OPTIONS_GHC -optP-include -optPdist/build/autogen/cabal_macros.h -}
 module Web.Routes.TH where
 
 import Control.Monad (ap, replicateM)

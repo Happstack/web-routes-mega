@@ -3,5 +3,5 @@ include /usr/share/cdbs/1/rules/debhelper.mk
 include /usr/share/cdbs/1/class/hlibrary.mk
 
 # How to install an extra file into the documentation package
-#binary-fixup/libghc6-URLT-doc::
-#	echo "Some informative text" > debian/libghc6-URLT-doc/usr/share/doc/libghc6-URLT-doc/AnExtraDocFile
+#binary-fixup/libghc6-web-routes-th-doc::
+#	echo "Some informative text" > debian/libghc6-web-routes-th-doc/usr/share/doc/libghc6-web-routes-th-doc/AnExtraDocFile
