@@ -2,7 +2,6 @@
 module Web.Routes.PathInfo where
 
 import Control.Applicative (pure, (*>),(<*>))
-import Control.Applicative.Error (Failing(Failure, Success))
 import Control.Monad (msum)
 import Data.List (stripPrefix, tails)
 import Data.Maybe (fromJust)
@@ -10,6 +9,7 @@ import Text.ParserCombinators.Parsec.Prim (GenParser, Parser)
 import Text.ParserCombinators.Parsec.Error (ParseError, errorPos, errorMessages, showErrorMessages)
 import Text.ParserCombinators.Parsec.Pos (incSourceLine, sourceName, sourceLine, sourceColumn)
 import Text.Parsec.Prim (State(..), Reply(..), mkPT, runParsecT, getPosition, token, parse, many)
+
 import Web.Routes.Base (decodePathInfo, encodePathInfo)
 
 -- this is not very efficient. Among other things, we need only consider the last 'n' characters of x where n == length y.
@@ -26,7 +26,7 @@ anySegment = pToken (const "any string") Just
 
 pToken msg f = do pos <- getPosition
                   token id (const $ incSourceLine pos 1) f
-                  
+
 p2u :: Parser a -> URLParser a
 p2u p = 
   mkPT $ \state@(State sInput sPos sUser) -> 
@@ -41,6 +41,29 @@ p2u p =
       fixReply ss (Ok a (State "" sPos sUser) e) = (Ok a (State ss sPos sUser) e) 
       fixReply ss (Ok a (State s sPos sUser) e) = (Ok a (State (s:ss) sPos sUser) e) 
 
+{-
+p2u :: Parser a -> URLParser a
+p2u p = 
+  do (State sInput sPos sUser) <- getParserState
+     case sInput of
+       (s:ss) -> let r = runParser p () "" s
+                 in case r of
+                      (Left e) -> return e
+-}
+       
+{-
+  mkPT $ \state@(State sInput sPos sUser) -> 
+  case sInput of
+    (s:ss) ->
+       do r <- runParsecT p (State s sPos sUser)
+          return (fmap (fmap (fixReply ss)) r)
+
+    where
+      fixReply :: [String] -> (Reply String u a) -> (Reply [String] u a)
+      fixReply _ (Error err) = (Error err)
+      fixReply ss (Ok a (State "" sPos sUser) e) = (Ok a (State ss sPos sUser) e) 
+      fixReply ss (Ok a (State s sPos sUser) e) = (Ok a (State (s:ss) sPos sUser) e) 
+-}
 class PathInfo a where
   toPathSegments :: a -> [String]
   fromPathSegments :: URLParser a
@@ -61,12 +84,12 @@ toPathInfo = ('/' :) . encodePathInfo . toPathSegments
 --
 -- However, if the pathInfo was prepend with http://example.org/ with
 -- a trailing slash, then things might not line up.
-fromPathInfo :: (PathInfo u) => String -> Failing u
+fromPathInfo :: (PathInfo u) => String -> Either String u
 fromPathInfo pi = 
   let segments = (decodePathInfo $ dropSlash pi) 
-  in case parse fromPathSegments (show segments) segments  of
-                       Left err -> Failure [showParseError err]
-                       Right x  -> Success x
+  in case parse fromPathSegments (show segments) segments of
+    (Left e)  -> Left (showParseError e)
+    (Right r) -> Right r
   where
     dropSlash ('/':rs) = rs
     dropSlash x        = x

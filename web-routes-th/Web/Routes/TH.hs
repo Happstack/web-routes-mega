@@ -3,16 +3,12 @@
 module Web.Routes.TH where
 
 import Control.Applicative (Applicative(pure, (<*>), (*>)))
-import Control.Applicative.Error (Failing(Failure, Success))
 import Control.Monad (replicateM)
 import Data.List (intercalate)
 import Language.Haskell.TH
 import Text.Parsec ((<|>),many1)
 import Web.Routes.PathInfo
 
-
--- FIXME: handle unexpected end of input
--- FIXME: handle invalid input
 -- FIXME: handle when called with a type (not data, newtype)
 derivePathInfo :: Name -> Q [Dec]
 derivePathInfo name

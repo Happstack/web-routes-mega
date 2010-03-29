@@ -2,7 +2,6 @@
 module Web.Routes.Regular where
 
 import Control.Applicative hiding ((<|>))
-import Control.Applicative.Error (Failing(Failure, Success))
 import Data.Char (toLower)
 import Generics.Regular
 import Text.ParserCombinators.Parsec.Prim

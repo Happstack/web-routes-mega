@@ -16,7 +16,6 @@ module Web.Routes.Monad where
 import Control.Applicative (Applicative((<*>), pure), Alternative((<|>), empty))
 import Control.Monad (MonadPlus(mzero, mplus))
 import Control.Monad.Fix (MonadFix(mfix))
-import HSX.XMLGenerator (XMLGenT(..))
 
 -- * RouteT Monad Transformer
 

@@ -2,7 +2,6 @@
 module Main where
 
 import Control.Applicative(Applicative((<*>),pure), (<$>), (*>))
-import Control.Applicative.Error
 import Control.Monad.Consumer(next)
 import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
@@ -86,22 +85,26 @@ main1 =
   do now <- getCurrentTime
      let fromAbs str =
            case decodePathInfo str of
-             ["",p] -> maybeRead' p ("Failed to parse as url: " ++ str) 
-             _ -> Failure ["Failed to parse as url: " ++ str]
-         mkAbs s     = encodePathInfo ["", show s]
+             [p] -> case reads p of
+               [(n,[])] -> Right n
+               _ -> Left ("Failed to parse as url: " ++ str) 
+             _ -> Left ("Failed to parse as url: " ++ str)
+         mkAbs s     = encodePathInfo [show s]
      run 3000 $ handleWai_ mkAbs fromAbs "http://localhost:3000/" (mySite now) 
      
 -- we can neatly wrap up the handler with it's mkAbs / fromAbs functions like this:     
      
-mySiteSpec :: UTCTime -> Site SiteURL String Application
+mySiteSpec :: UTCTime -> Site SiteURL Application
 mySiteSpec now =     
   Site { handleLink = mySite now
        , defaultPage = MyHome
-       , formatLink = \url -> encodePathInfo ["", show url]
+       , formatLink = \url -> encodePathInfo [show url]
        , parseLink = \str ->
          case decodePathInfo str of
-             ["",p] -> maybeRead' p ("Failed to parse as url: " ++ str) 
-             _ -> Failure ["Failed to parse as url: " ++ str]
+             [p] -> case reads p of
+               [(n,[])] -> Right n
+               _ -> Left ("Failed to parse as url: " ++ str) 
+             _ -> Left ("Failed to parse as url: " ++ str)
        }
 
 -- and call it like this:
