@@ -2,11 +2,10 @@
 {-# OPTIONS_GHC -optP-include -optPdist/build/autogen/cabal_macros.h #-}
 module Web.Routes.TH where
 
-import Control.Applicative (Applicative(pure, (<*>), (*>)))
-import Control.Monad (replicateM)
+import Control.Monad (ap, replicateM)
 import Data.List (intercalate)
 import Language.Haskell.TH
-import Text.Parsec ((<|>),many1)
+import Text.ParserCombinators.Parsec ((<|>),many1)
 import Web.Routes.PathInfo
 
 -- FIXME: handle when called with a type (not data, newtype)
@@ -47,8 +46,8 @@ derivePathInfo name
                             [ parseCon conName nArgs 
                             | (conName, nArgs) <- cons])
                    parseCon :: Name -> Int -> ExpQ
-                   parseCon conName nArgs = foldr1 (\a b -> appE (appE [| (<*>) |] a) b) 
-                                                   ([| segment $(stringE (nameBase conName)) *> pure $(conE conName) |]
+                   parseCon conName nArgs = foldr1 (\a b -> appE (appE [| ap |] a) b) 
+                                                   ([| segment $(stringE (nameBase conName)) >> return $(conE conName) |]
                                                    : (replicate nArgs [| fromPathSegments |]))
                funD 'fromPathSegments [clause [] (normalB body) []]
 

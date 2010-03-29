@@ -43,5 +43,5 @@ instance forall c f. (Constructor c, GToURL f) => GToURL (C c f) where
    gtoPathSegments c@(C x)  = (lower $ conName c) : gtoPathSegments x
    gfromPathSegments = 
      let constr = undefined :: C c f r
-     in do segment (lower $ conName constr)
+     in do segment (lower $ conName constr) <|>  segment (conName constr)
            C <$> gfromPathSegments

@@ -11,7 +11,7 @@ Cabal-Version:    >= 1.6
 Build-type:       Simple
 
 Library
-        Build-Depends:    base >= 4 && < 5, parsec >= 3.1.0, regular, web-routes >= 0.18
+        Build-Depends:    base >= 4 && < 5, parsec >= 2 && <3, regular, web-routes >= 0.18
         Exposed-Modules:  Web.Routes.Regular
 
 source-repository head
