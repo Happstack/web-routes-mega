@@ -4,6 +4,7 @@ import qualified Data.ByteString.Char8 as S
 import qualified Data.ByteString.Lazy.Char8 as L
 import Network.Wai
 import Network.Wai.Enumerator
+import Web.Routes.Base
 import Web.Routes.PathInfo 
 import Web.Routes.HandleT
 import Web.Routes.Monad (RouteT, runRouteT)
@@ -44,4 +45,4 @@ handleWaiRouteT :: (PathInfo url) => String -> (url -> Request -> RouteT url IO 
 handleWaiRouteT approot handler = handleWaiRouteT_ toPathInfo fromPathInfo approot handler
 
 waiSite :: Site url Application -> String -> Application
-waiSite site approot = handleWai_ (formatLink site) (withDefault site) approot (handleLink site) 
+waiSite site approot = handleWai_ (encodePathInfo . formatPathSegments site) (withDefault site) approot (handleSite site) 

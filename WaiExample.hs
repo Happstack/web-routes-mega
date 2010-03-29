@@ -96,15 +96,15 @@ main1 =
      
 mySiteSpec :: UTCTime -> Site SiteURL Application
 mySiteSpec now =     
-  Site { handleLink = mySite now
-       , defaultPage = MyHome
-       , formatLink = \url -> encodePathInfo [show url]
-       , parseLink = \str ->
-         case decodePathInfo str of
+  Site { handleSite          = mySite now
+       , defaultPage         = Just MyHome
+       , formatPathSegments  = \url -> [show url]
+       , parsePathSegments   = \segs ->
+         case segs of
              [p] -> case reads p of
                [(n,[])] -> Right n
-               _ -> Left ("Failed to parse as url: " ++ str) 
-             _ -> Left ("Failed to parse as url: " ++ str)
+               _ -> Left ("Failed to parse as url: " ++ show segs) 
+             _ -> Left ("Failed to parse as url: " ++ show segs)
        }
 
 -- and call it like this:
