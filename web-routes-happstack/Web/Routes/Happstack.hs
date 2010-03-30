@@ -5,8 +5,8 @@ import Control.Applicative ((<$>))
 import Control.Monad (MonadPlus(mzero))
 import Data.List (intercalate)
 import Happstack.Server (FilterMonad(..), ServerMonad(..), WebMonad(..), ServerPartT, Response, Request(rqPaths), ToMessage(..), dirs, runServerPartT, withRequest)
-import Web.Routes.Monad (RouteT(RouteT), liftRouteT, mapRouteT)
-import Web.Routes.HandleT (Site, runSite)
+import Web.Routes.RouteT (RouteT(RouteT), liftRouteT, mapRouteT)
+import Web.Routes.Site (Site, runSite)
 
 instance (ServerMonad m) => ServerMonad (RouteT url m) where
     askRq       = liftRouteT askRq

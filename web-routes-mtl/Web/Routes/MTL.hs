@@ -2,7 +2,7 @@
 module Web.Routes.MTL where
 
 import "mtl" Control.Monad.Trans (MonadTrans(lift), MonadIO(liftIO))
-import Web.Routes.Monad (RouteT(RouteT, unRouteT), liftRouteT, mapRouteT)
+import Web.Routes.RouteT (RouteT(RouteT, unRouteT), liftRouteT, mapRouteT)
 import Control.Monad.Reader(MonadReader(ask,local))
 import Control.Monad.State(MonadState(get,put))
 import Control.Monad.Writer(MonadWriter(listen, tell, pass))

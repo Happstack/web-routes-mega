@@ -5,7 +5,7 @@ module Web.Routes.XMLGenT where
 import HSP
 import Control.Applicative ((<$>))
 import qualified HSX.XMLGenerator as HSX
-import Web.Routes.Monad (RouteT, ShowURL(showURL), URL)
+import Web.Routes.RouteT (RouteT, ShowURL(showURL), URL)
 
 instance (Functor m, Monad m) => HSX.XMLGen (RouteT url m) where
     type HSX.XML (RouteT url m) = XML

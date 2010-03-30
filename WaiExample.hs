@@ -12,13 +12,10 @@ import Network.Wai
 import Network.Wai.Enumerator
 import Network.Wai.Handler.SimpleServer (run)
 import Text.Html ((!), (<<), (+++), Html, anchor, body, href, toHtml, renderHtml, header, thetitle)
-import Web.Routes.Base
-import Web.Routes.PathInfo
+import Web.Routes
 import Web.Routes.TH
-import Web.Routes.HandleT
-import Web.Routes.Monad
 import Web.Routes.Regular
-import Web.Routes.QuickCheck
+import Web.Routes.Wai
 import Test.QuickCheck (Arbitrary(..), oneof, quickCheck)
 import System.FilePath((</>))
 
