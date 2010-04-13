@@ -16,7 +16,7 @@ derivePathInfo name
            Tagged cons cx keys ->
                do let context = [ mkCtx ''PathInfo [varT key] | key <- keys ] ++ map return cx
                   i <- instanceD (sequence context) (mkType ''PathInfo [mkType name (map varT keys)])
-                       [ toURLFn cons 
+                       [ toPathSegmentsFn cons 
                        , fromPathSegmentsFn cons
                        ]
                   return [i]
@@ -27,8 +27,8 @@ derivePathInfo name
       mkCtx = mkType
 #endif
 
-      toURLFn :: [(Name, Int)] -> DecQ
-      toURLFn cons 
+      toPathSegmentsFn :: [(Name, Int)] -> DecQ
+      toPathSegmentsFn cons 
           = do inp <- newName "inp"
                let body = caseE (varE inp) $
                             [ do args <- replicateM nArgs (newName "arg")
@@ -46,7 +46,7 @@ derivePathInfo name
                             [ parseCon conName nArgs 
                             | (conName, nArgs) <- cons])
                    parseCon :: Name -> Int -> ExpQ
-                   parseCon conName nArgs = foldr1 (\a b -> appE (appE [| ap |] a) b) 
+                   parseCon conName nArgs = foldl1 (\a b -> appE (appE [| ap |] a) b) 
                                                    ([| segment $(stringE (nameBase conName)) >> return $(conE conName) |]
                                                    : (replicate nArgs [| fromPathSegments |]))
                funD 'fromPathSegments [clause [] (normalB body) []]
