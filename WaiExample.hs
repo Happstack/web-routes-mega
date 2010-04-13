@@ -82,15 +82,15 @@ main1 =
                [(n,[])] -> Right n
                _ -> Left ("Failed to parse as url: " ++ str) 
              _ -> Left ("Failed to parse as url: " ++ str)
-         mkAbs s     = encodePathInfo [show s]
-     run 3000 $ handleWai_ mkAbs fromAbs "http://localhost:3000/" (mySite now) 
+         mkAbs s     = '/' : encodePathInfo [show s]
+     run 3000 $ handleWai_ mkAbs fromAbs "http://localhost:3000" (mySite now) 
      
 -- we can neatly wrap up the handler with it's mkAbs / fromAbs functions like this:     
      
 mySiteSpec :: UTCTime -> Site SiteURL Application
 mySiteSpec now =     
+ setDefault MyHome $
   Site { handleSite          = mySite now
-       , defaultPage         = Just MyHome
        , formatPathSegments  = \url -> [show url]
        , parsePathSegments   = \segs ->
          case segs of

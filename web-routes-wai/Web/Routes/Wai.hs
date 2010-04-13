@@ -45,4 +45,4 @@ handleWaiRouteT :: (PathInfo url) => String -> (url -> Request -> RouteT url IO 
 handleWaiRouteT approot handler = handleWaiRouteT_ toPathInfo fromPathInfo approot handler
 
 waiSite :: Site url Application -> String -> Application
-waiSite site approot = handleWai_ (encodePathInfo . formatPathSegments site) (withDefault site) approot (handleSite site) 
+waiSite site approot = handleWai_ (encodePathInfo . formatPathSegments site) (parsePathSegments site . decodePathInfo) approot (handleSite site) 
