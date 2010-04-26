@@ -1,5 +1,5 @@
 Name:             web-routes-transformers
-Version:          0.18
+Version:          0.19
 License:          BSD3
 Author:           jeremy@seereason.com
 Maintainer:       partners@seereason.com
@@ -10,7 +10,7 @@ Cabal-Version:    >= 1.6
 Build-type:       Simple
 
 Library
-        Build-Depends:    base >= 4 && < 5, transformers, web-routes >= 0.18
+        Build-Depends:    base >= 4 && < 5, transformers == 0.2.*, web-routes >= 0.18
         Exposed-Modules:  Web.Routes.Transformers
 
 source-repository head
