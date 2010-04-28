@@ -4,6 +4,8 @@ module Web.Routes.XMLGenT where
 
 import HSP
 import Control.Applicative ((<$>))
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 import qualified HSX.XMLGenerator as HSX
 import Web.Routes.RouteT (RouteT, ShowURL(showURL), URL)
 
@@ -21,6 +23,7 @@ instance (Functor m, Monad m) => HSX.XMLGen (RouteT url m) where
                               childer
                              )
     xmlToChild = UChild
+    pcdataToChild = HSX.xmlToChild . pcdata                                                           
 
 flattenCDATA :: [XML] -> [XML]
 flattenCDATA cxml = 
@@ -35,6 +38,12 @@ flattenCDATA cxml =
         flP (x:y:xs) bs = case (x,y) of
                            (CDATA e1 s1, CDATA e2 s2) | e1 == e2 -> flP (CDATA e1 (s1++s2) : xs) bs
                            _ -> flP (y:xs) (x:bs)
+
+instance (Monad m, Functor m) => IsAttrValue (RouteT url m) T.Text where
+    toAttrValue = toAttrValue . T.unpack
+
+instance (Monad m, Functor m) => IsAttrValue (RouteT url m) TL.Text where
+    toAttrValue = toAttrValue . TL.unpack
 
 instance (Functor m, Monad m) => HSX.EmbedAsAttr (RouteT url m) Attribute where
     asAttr = return . (:[]) . UAttr 
@@ -52,11 +61,23 @@ instance (Functor m, Monad m) => HSX.EmbedAsAttr (RouteT url m) (Attr String Boo
 instance (Functor m, Monad m) => HSX.EmbedAsAttr (RouteT url m) (Attr String Int) where
     asAttr (n := i)  = asAttr $ MkAttr (toName n, pAttrVal (show i))
 
+instance (Monad m, Functor m, IsName n) => (EmbedAsAttr (RouteT url m) (Attr n TL.Text)) where
+    asAttr (n := a) = asAttr $ MkAttr (toName n, pAttrVal $ TL.unpack a)
+
+instance (Monad m, Functor m, IsName n) => (EmbedAsAttr (RouteT url m) (Attr n T.Text)) where
+    asAttr (n := a) = asAttr $ MkAttr (toName n, pAttrVal $ T.unpack a)
+
 instance (Functor m, Monad m) => EmbedAsChild (RouteT url m) Char where
     asChild = XMLGenT . return . (:[]) . UChild . pcdata . (:[])
 
 instance (Functor m, Monad m) => EmbedAsChild (RouteT url m) String where
     asChild = XMLGenT . return . (:[]) . UChild . pcdata
+
+instance (Monad m, Functor m) => (EmbedAsChild (RouteT url m) TL.Text) where
+    asChild = asChild . TL.unpack
+
+instance (Monad m, Functor m) => (EmbedAsChild (RouteT url m) T.Text) where
+    asChild = asChild . T.unpack
 
 instance (Functor m, Monad m) => EmbedAsChild (RouteT url m) XML where
     asChild = XMLGenT . return . (:[]) . UChild
