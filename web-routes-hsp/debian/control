@@ -10,13 +10,13 @@ Build-Depends: debhelper (>= 7.0),
                ghc6-prof,
                libghc6-hsp-prof,
                libghc6-hsx-prof,
-               libghc6-web-routes-prof (>= 0.19),
+               libghc6-web-routes-prof (>= 0.23),
                libghc6-text-prof
 Build-Depends-Indep: ghc6-doc,
                      haddock,
                      libghc6-hsp-doc,
                      libghc6-hsx-doc,
-                     haskell-web-routes-doc (>= 0.19),
+                     haskell-web-routes-doc (>= 0.23),
                      haskell-text-doc
 Standards-Version: 3.8.1
 

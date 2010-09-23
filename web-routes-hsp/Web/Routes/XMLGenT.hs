@@ -7,7 +7,7 @@ import Control.Applicative ((<$>))
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified HSX.XMLGenerator as HSX
-import Web.Routes.RouteT (RouteT, ShowURL(showURL), URL)
+import Web.Routes.RouteT (RouteT, ShowURL(showURLParams), URL)
 
 instance (Functor m, Monad m) => HSX.XMLGen (RouteT url m) where
     type HSX.XML (RouteT url m) = XML
@@ -104,4 +104,4 @@ instance (Functor m, Monad m) => XMLGenerator (RouteT url m)
 
 instance (ShowURL m) => ShowURL (XMLGenT m) where
     type URL (XMLGenT m) = URL m
-    showURL url = XMLGenT $ showURL url
+    showURLParams url params = XMLGenT $ showURLParams url params
