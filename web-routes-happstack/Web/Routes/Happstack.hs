@@ -4,7 +4,7 @@ module Web.Routes.Happstack where
 import Control.Applicative ((<$>))
 import Control.Monad (MonadPlus(mzero))
 import Data.List (intercalate)
-import Happstack.Server (FilterMonad(..), ServerMonad(..), WebMonad(..), ServerPartT, Response, Request(rqPaths), ToMessage(..), dirs, runServerPartT, withRequest)
+import Happstack.Server (FilterMonad(..), ServerMonad(..), WebMonad(..), ServerPartT, Response, Request(rqPaths), ToMessage(..), dirs)
 import Web.Routes.RouteT (RouteT(RouteT), liftRouteT, mapRouteT)
 import Web.Routes.Site (Site, runSite)
 
