@@ -4,7 +4,7 @@ module Web.Routes.Happstack where
 import Control.Applicative ((<$>))
 import Control.Monad (MonadPlus(mzero))
 import Data.List (intercalate)
-import Happstack.Server (FilterMonad(..), ServerMonad(..), WebMonad(..), ServerPartT, Response, Request(rqPaths), ToMessage(..), dirs)
+import Happstack.Server (FilterMonad(..), ServerMonad(..), WebMonad(..), HasRqData(..), ServerPartT, Response, Request(rqPaths), ToMessage(..), dirs)
 import Web.Routes.RouteT (RouteT(RouteT), liftRouteT, mapRouteT)
 import Web.Routes.Site (Site, runSite)
 
@@ -19,6 +19,11 @@ instance (FilterMonad a m)=> FilterMonad a (RouteT url m) where
 
 instance (WebMonad a m) => WebMonad a (RouteT url m) where
     finishWith = liftRouteT . finishWith
+
+instance (HasRqData m) => HasRqData (RouteT url m) where
+    askRqEnv       = liftRouteT askRqEnv
+    localRqEnv f m = mapRouteT (localRqEnv f) m
+    rqDataError    = liftRouteT . rqDataError
 
 implSite :: (Functor m, Monad m, MonadPlus m, ServerMonad m) => String -> FilePath -> Site url (m a) -> m a
 implSite domain approot siteSpec =
