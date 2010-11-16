@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, TypeSynonymInstances, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE MultiParamTypeClasses, TypeSynonymInstances, FlexibleInstances, IncoherentInstances, OverlappingInstances, UndecidableInstances, TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Web.Routes.XMLGenT where
 
