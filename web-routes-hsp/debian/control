@@ -17,7 +17,7 @@ Build-Depends-Indep: ghc6-doc,
                      libghc6-hsp-doc,
                      libghc6-hsx-doc,
                      haskell-web-routes-doc (>= 0.23),
-                     haskell-text-doc
+                     libghc6-text-doc
 Standards-Version: 3.8.1
 
 Package: libghc6-web-routes-hsp-dev
