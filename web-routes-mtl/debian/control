@@ -35,7 +35,10 @@ Description: Extends web-routes with mtl-based MonadIO / MonadTrans RouteT insta
  .
  This package contains the libraries compiled with profiling enabled.
 
-Package: haskell-web-routes-mtl-doc
+Package: libghc6-web-routes-mtl-doc
+Conflicts: haskell-web-routes-mtl-doc
+Provides: haskell-web-routes-mtl-doc
+Replaces: haskell-web-routes-mtl-doc
 Architecture: all
 Section: doc
 Depends: ${haskell:Depends},

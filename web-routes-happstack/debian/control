@@ -35,7 +35,10 @@ Description: Adds support for using web-routes with Happstack
  .
  This package contains the libraries compiled with profiling enabled.
 
-Package: haskell-web-routes-happstack-doc
+Package: libghc6-web-routes-happstack-doc
+Conflicts: haskell-web-routes-happstack-doc
+Provides: haskell-web-routes-happstack-doc
+Replaces: haskell-web-routes-happstack-doc
 Architecture: all
 Section: doc
 Depends: ${haskell:Depends},

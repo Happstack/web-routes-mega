@@ -35,7 +35,10 @@ Description: Support for deriving PathInfo using Template Haskell
  .
  This package contains the libraries compiled with profiling enabled.
 
-Package: haskell-web-routes-th-doc
+Package: libghc6-web-routes-th-doc
+Conflicts: haskell-web-routes-th-doc
+Provides: haskell-web-routes-th-doc
+Replaces: haskell-web-routes-th-doc
 Architecture: all
 Section: doc
 Depends: ${haskell:Depends},

@@ -39,7 +39,10 @@ Description: Adds XMLGenerator instance for RouteT monad
  .
  This package contains the libraries compiled with profiling enabled.
 
-Package: haskell-web-routes-hsp-doc
+Package: libghc6-web-routes-hsp-doc
+Conflicts: haskell-web-routes-hsp-doc
+Provides: haskell-web-routes-hsp-doc
+Replaces: haskell-web-routes-hsp-doc
 Architecture: all
 Section: doc
 Depends: ${haskell:Depends},
