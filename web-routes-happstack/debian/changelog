@@ -1,3 +1,9 @@
+haskell-web-routes-happstack (0.21.3) unstable; urgency=low
+
+  * Added seeOtherURL
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Mon, 31 Jan 2011 19:17:25 -0600
+
 haskell-web-routes-happstack (0.21.2) unstable; urgency=low
 
   * Change doc package name prefix from haskell to libghc6.

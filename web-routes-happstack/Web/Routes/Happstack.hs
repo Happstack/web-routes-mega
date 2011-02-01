@@ -1,11 +1,11 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeSynonymInstances, UndecidableInstances, PackageImports #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, MultiParamTypeClasses, TypeSynonymInstances, UndecidableInstances, PackageImports #-}
 module Web.Routes.Happstack where
 
 import Control.Applicative ((<$>))
 import Control.Monad (MonadPlus(mzero))
 import Data.List (intercalate)
-import Happstack.Server (FilterMonad(..), ServerMonad(..), WebMonad(..), HasRqData(..), ServerPartT, Response, Request(rqPaths), ToMessage(..), dirs)
-import Web.Routes.RouteT (RouteT(RouteT), liftRouteT, mapRouteT)
+import Happstack.Server (FilterMonad(..), ServerMonad(..), WebMonad(..), HasRqData(..), ServerPartT, Response, Request(rqPaths), ToMessage(..), dirs, seeOther)
+import Web.Routes.RouteT (RouteT(RouteT), ShowURL, URL, showURL, liftRouteT, mapRouteT)
 import Web.Routes.Site (Site, runSite)
 
 instance (ServerMonad m) => ServerMonad (RouteT url m) where
@@ -50,3 +50,8 @@ implSite__ domain approot handleError siteSpec =
                         (Failure errs) -> handleError errs
                         (Success sp)   -> localRq (const $ rq { rqPaths = [] }) sp
 -}
+-- | similar to 'seeOther' but takes a 'URL' 'm' as an argument
+seeOtherURL :: (ShowURL m, FilterMonad Response m) => URL m -> m Response
+seeOtherURL url = 
+    do otherURL <- showURL url
+       seeOther otherURL (toResponse "")
