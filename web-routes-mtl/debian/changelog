@@ -1,3 +1,10 @@
+haskell-web-routes-mtl (0.20.1) unstable; urgency=low
+
+  * deprecated web-routes-mtl:Web.Routes.MTL and moved it all into
+    web-routes:Web.Routes
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Mon, 14 Mar 2011 14:37:26 -0500
+
 haskell-web-routes-mtl (0.19.2) unstable; urgency=low
 
   * Change doc package name prefix from haskell to libghc6.
