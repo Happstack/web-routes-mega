@@ -13,7 +13,7 @@ Build-Depends: debhelper (>= 7.0),
 Build-Depends-Indep: ghc6-doc,
                      haddock,
                      libghc6-parsec-doc,
-                     haskell-web-routes-doc (>= 0.19)
+                     libghc6-web-routes-doc (>= 0.19)
 Standards-Version: 3.8.1
 
 Package: libghc6-web-routes-th-dev
