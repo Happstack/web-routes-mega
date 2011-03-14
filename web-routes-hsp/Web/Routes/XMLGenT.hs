@@ -7,7 +7,7 @@ import Control.Applicative ((<$>))
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified HSX.XMLGenerator as HSX
-import Web.Routes.RouteT (RouteT, ShowURL(showURLParams), URL)
+import Web.Routes.RouteT (RouteT, ShowURL(showURLParams), showURL, URL)
 
 instance (Functor m, Monad m) => HSX.XMLGen (RouteT url m) where
     type HSX.XML (RouteT url m) = XML
@@ -66,6 +66,11 @@ instance (Monad m, Functor m, IsName n) => (EmbedAsAttr (RouteT url m) (Attr n T
 
 instance (Monad m, Functor m, IsName n) => (EmbedAsAttr (RouteT url m) (Attr n T.Text)) where
     asAttr (n := a) = asAttr $ MkAttr (toName n, pAttrVal $ T.unpack a)
+
+instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr String url) where
+    asAttr (n := u) = 
+        do url <- showURL u
+           asAttr $ MkAttr (toName n, pAttrVal url)
 
 instance (Functor m, Monad m) => EmbedAsChild (RouteT url m) Char where
     asChild = XMLGenT . return . (:[]) . UChild . pcdata . (:[])
