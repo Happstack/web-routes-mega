@@ -6,21 +6,21 @@ Build-Depends: debhelper (>= 7.0),
                haskell-devscripts (>= 0.6.15+nmu7),
                hscolour,
                cdbs,
-               ghc6 (>= 6.8),
-               ghc6-prof,
-               libghc6-hsp-prof,
-               libghc6-hsx-prof,
-               libghc6-web-routes-prof (>= 0.23),
-               libghc6-text-prof
-Build-Depends-Indep: ghc6-doc,
+               ghc (>= 6.8),
+               ghc-prof,
+               libghc-hsp-prof,
+               libghc-hsx-prof,
+               libghc-web-routes-prof (>= 0.23),
+               libghc-text-prof
+Build-Depends-Indep: ghc-doc,
                      haddock,
-                     libghc6-hsp-doc,
-                     libghc6-hsx-doc,
-                     libghc6-web-routes-doc (>= 0.23),
-                     libghc6-text-doc
+                     libghc-hsp-doc,
+                     libghc-hsx-doc,
+                     libghc-web-routes-doc (>= 0.23),
+                     libghc-text-doc
 Standards-Version: 3.8.1
 
-Package: libghc6-web-routes-hsp-dev
+Package: libghc-web-routes-hsp-dev
 Architecture: any
 Section: haskell
 Depends: ${haskell:Depends},
@@ -29,17 +29,17 @@ Description: Adds XMLGenerator instance for RouteT monad
  .
  This package contains the normal library files.
 
-Package: libghc6-web-routes-hsp-prof
+Package: libghc-web-routes-hsp-prof
 Architecture: any
 Section: haskell
 Depends: ${haskell:Depends},
          ${misc:Depends},
-         libghc6-web-routes-hsp-dev
+         libghc-web-routes-hsp-dev
 Description: Adds XMLGenerator instance for RouteT monad
  .
  This package contains the libraries compiled with profiling enabled.
 
-Package: libghc6-web-routes-hsp-doc
+Package: libghc-web-routes-hsp-doc
 Conflicts: haskell-web-routes-hsp-doc
 Provides: haskell-web-routes-hsp-doc
 Replaces: haskell-web-routes-hsp-doc
@@ -47,7 +47,7 @@ Architecture: all
 Section: doc
 Depends: ${haskell:Depends},
          ${misc:Depends},
-         ghc6-doc
+         ghc-doc
 Description: Adds XMLGenerator instance for RouteT monad
  .
  This package contains the documentation files.

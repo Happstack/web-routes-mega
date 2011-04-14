@@ -6,17 +6,17 @@ Build-Depends: debhelper (>= 7.0),
                haskell-devscripts (>= 0.6.15+nmu7),
                hscolour,
                cdbs,
-               ghc6 (>= 6.8),
-               ghc6-prof,
-               libghc6-mtl-prof,
-               libghc6-web-routes-prof (>= 0.18)
-Build-Depends-Indep: ghc6-doc,
+               ghc (>= 6.8),
+               ghc-prof,
+               libghc-mtl-prof,
+               libghc-web-routes-prof (>= 0.18)
+Build-Depends-Indep: ghc-doc,
                      haddock,
-                     libghc6-mtl-doc,
-                     libghc6-web-routes-doc (>= 0.18)
+                     libghc-mtl-doc,
+                     libghc-web-routes-doc (>= 0.18)
 Standards-Version: 3.8.1
 
-Package: libghc6-web-routes-mtl-dev
+Package: libghc-web-routes-mtl-dev
 Architecture: any
 Section: haskell
 Depends: ${haskell:Depends},
@@ -25,17 +25,17 @@ Description: Extends web-routes with mtl-based MonadIO / MonadTrans RouteT insta
  .
  This package contains the normal library files.
 
-Package: libghc6-web-routes-mtl-prof
+Package: libghc-web-routes-mtl-prof
 Architecture: any
 Section: haskell
 Depends: ${haskell:Depends},
          ${misc:Depends},
-         libghc6-web-routes-mtl-dev
+         libghc-web-routes-mtl-dev
 Description: Extends web-routes with mtl-based MonadIO / MonadTrans RouteT instances
  .
  This package contains the libraries compiled with profiling enabled.
 
-Package: libghc6-web-routes-mtl-doc
+Package: libghc-web-routes-mtl-doc
 Conflicts: haskell-web-routes-mtl-doc
 Provides: haskell-web-routes-mtl-doc
 Replaces: haskell-web-routes-mtl-doc
@@ -43,7 +43,7 @@ Architecture: all
 Section: doc
 Depends: ${haskell:Depends},
          ${misc:Depends},
-         ghc6-doc
+         ghc-doc
 Description: Extends web-routes with mtl-based MonadIO / MonadTrans RouteT instances
  .
  This package contains the documentation files.
