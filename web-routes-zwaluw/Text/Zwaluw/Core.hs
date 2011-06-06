@@ -20,7 +20,6 @@ import Control.Monad.Error
 import Control.Monad.List
 import Control.Monad.State
 import Control.Monad.Trans
--- import Control.Monad.Trans.Error (Error(..), ErrorList(..))
 import Data.Data        (Data, Typeable)
 import Data.Either      (partitionEithers)
 import Data.Function    (on)
@@ -44,7 +43,7 @@ compose op mf mg s = do
 -- and returns the greatest elements of the list by the comparison function.
 -- The list must be finite and non-empty.
 maximumsBy               :: (a -> a -> Ordering) -> [a] -> [a]
-maximumsBy _ []          =  error "List.maximumBy: empty list"
+maximumsBy _ []          =  error "Text.Zwaluw.Core.maximumsBy: empty list"
 maximumsBy cmp (x:xs)        =  foldl maxBy [x] xs
                         where
                            maxBy xs@(x:_) y = case cmp x y of
@@ -52,7 +51,6 @@ maximumsBy cmp (x:xs)        =  foldl maxBy [x] xs
                                        EQ -> (y:xs)
                                        LT  -> [y]
 
--- newtype Parser e tok a = Parser { runParser :: tok -> ListT (StateT (Pos e) (Either e)) (a, tok) }
 newtype Parser e tok a = Parser { runParser :: tok -> Pos e -> [Either e ((a, tok), Pos e)] }
 
 instance Functor (Parser e tok) where
@@ -145,38 +143,22 @@ val rs ss = Router rs' ss'
 parse :: (Position (Pos e)) => Router e tok () a -> tok -> [Either e (a, tok)]
 parse p s = 
     map (either Left (\((f, tok), _) -> Right (f (), tok))) $ runParser (prs p) s initialPos
-{-
-    case partitionEithers $ runParser (prs p) s initialPos of
-      ([], [])   -> Right []
-      (errs, []) -> Left $ errs
-      (_, fs)    -> Right [ (f (), tok) | ((f, tok),_) <- fs ]
--}
-
-{-
-parse :: (Position (Pos e)) => Router e tok () a -> tok -> Either [e] [(a, tok)]
-parse p s = 
-    case partitionEithers $ runParser (prs p) s initialPos of
-      ([], [])   -> Right []
-      (errs, []) -> Left $ errs
-      (_, fs)    -> Right [ (f (), tok) | ((f, tok),_) <- fs ]
--}
 
 bestErrors :: (ErrorPosition e, Ord (Pos e)) => [e] -> [e]
-bestErrors = maximumsBy (compare `on` getPosition)
+bestErrors [] = []
+bestErrors errs = maximumsBy (compare `on` getPosition) errs
 
---      (Left errs)     -> Left errs
---      (Right fs) -> Right [ (f (), tok) | (f, tok) <- fs ]
-{-
--- | Give the first parse, for Routers with a parser that yields just one value.
-parse1 :: (Error e, Position (Pos e)) => Router e tok () (a :- ()) -> tok -> Either [e] a
-parse1 p s = 
-    case parse p s of 
-      (Left e) -> (Left e)
-      (Right as) -> 
-          case map (hhead . fst) as of
-            [] -> Left [strMsg "no complete parses."]
-            (a:_) -> Right a
--}
+-- | Give the first parse, for Routers with a parser that yields just one value. 
+-- Otherwise return the error (or errors) with the highest error position.
+parse1 :: (ErrorPosition e, Position (Pos e), Show e, Ord (Pos e)) =>
+     (tok -> Bool) -> Router e tok () (a :- ()) -> tok -> Either [e] a
+parse1 isComplete r paths = 
+    let results = parse r paths
+    in case [ a | (Right (a,tok)) <- results, isComplete tok ] of
+         ((u :- ()):_) -> Right u
+         _             -> Left $ bestErrors [ e | Left e <- results ]
+
+
 -- | Give all possible serializations.
 unparse :: tok -> Router e tok () url -> url -> [tok]
 unparse tok p = (map (($ tok) . fst)) . ser p
@@ -188,126 +170,3 @@ unparse1 tok p a =
     case unparse tok p (a :- ()) of
       [] -> Nothing
       (s:_) -> Just s
-{-
-      (Left e)   -> Left e
-      (Right []) -> Left (strMsg "unparse1: no valid unparsing")
-      (Right (s:_)) -> Right s
--}
-
-{-
-data Router tok a b = Router
-  { prs :: tok -> Either RouteError [(a -> b, tok)]
-  , ser :: b -> Either RouteError [(tok -> tok, a)]
-  }
-
-
-routeError :: ErrorMsg -> Either RouteError b
-routeError e = Left (RouteError Nothing e)
--}
-
-
-
-{-
-mapRouteError :: (e -> e') -> Router e a b -> Router e' a b
-mapRouteError f (Router pf sf) =
-    Router (\a -> either (Left . f) (Right . id) (pf a))
-           (\b -> either (Left . f) (Right . id) (sf b))
-
-instance Category (Router tok) where
-  id = Router
-    (\x -> return [(id, x)])
-    (\x -> return [(id, x)])
-
-  ~(Router pf sf) . ~(Router pg sg) = Router 
-    (compose (.) pf pg)
-    (compose (.) sf sg) 
--} 
-{-
-    Parser $ \tok ->
-        do (f, tok')  <- runParser mf tok
-           (g, tok'') <- runParser mg tok'
-           return (f `op` g, tok'')
--}
-
-
-{-
-instance Applicative (Parser e tok) where
-    pure =         
-        Parser $ \tok pos ->
-            [Right ((a, tok), pos)]
-    (Parser f) >>= (Parser x) =
-        Parser $ \tok pos ->
-            concat [ (runParser (f a)) tok' pos' | Right ((a, tok'), pos') <- f tok pos ]
--}
-
-    
-
-                         
-        
-    
-
--- type P pos e tok a = tok -> pos -> [Either e ((a, tok), pos)]
-
-
-
-{-
-instance Monad (Parser e tok) where
-    return a = Parser $ \tok -> return (a, tok)
-    (Parser p) >>= f =
-        Parser $ \tok ->
-            do (a, tok') <- p tok
-               (b, tok'') <- runParser (f a) tok'
-               return (b, tok'')
-
-instance MonadPlus (Parser e tok) where
-    mzero = Parser $ \tok -> ListT $ return []
-    (Parser x) `mplus` (Parser y) =
-        Parser $ \tok -> 
-            ListT $ StateT $ \st ->
-                case runStateT (runListT (x tok)) st of
-                  (Left _) -> 
-                      runStateT (runListT (y tok)) st
-                  (Right (a, st')) ->
-                      case runStateT (runListT (y tok)) st of
-                        (Left _) -> Right (a, st')
-                        (Right (b, st'')) -> Right (a ++ b, st'')
-
-instance Applicative (Parser e tok) where
-    pure    = return
-    f <*> x = f `ap` x
-
-
-composeP
-  :: (a -> b -> c)
-  -> Parser e tok a
-  -> Parser e tok b
-  -> Parser e tok c
-composeP op mf mg = 
-    Parser $ \tok ->
-        do (f, tok')  <- runParser mf tok
-           (g, tok'') <- runParser mg tok'
-           return (f `op` g, tok'')
-
-bind :: Either e [a] -> (a -> Either e [b]) -> Either e [b]
-bind (Left e) _ = (Left e)
-bind (Right l) f =
-    case partitionEithers (map f l) of
-      ([], []) -> Right []
-      (errs,[]) -> Left (last errs)
-      (_, succ) -> Right (concat succ)
-composeE
-  :: (a -> b -> c)
-  -> (i -> Either e [(a, j)])
-  -> (j -> Either e [(b, k)])
-  -> (i -> Either e [(c, k)])
-composeE op mf mg = \s ->
-  case mf s of
-    (Left e) -> (Left e)
-    (Right fs) ->
-        case partitionEithers [ fmap (map (first (op f))) (mg s') | (f, s') <- fs  ] of
-          ([], []) -> Right []
-          (errs,[]) -> Left (last errs)
-          (_, succs) -> Right (concat succs)
-
-
--}

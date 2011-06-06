@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, FlexibleInstances, TemplateHaskell, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE DeriveDataTypeable, FlexibleContexts, FlexibleInstances, TemplateHaskell, TypeFamilies, TypeOperators #-}
 module Web.Routes.Zwaluw 
 {-
     (
@@ -42,6 +42,7 @@ import Data.Data
 import Data.Monoid
 import Data.Char (isDigit, isHexDigit, intToDigit, digitToInt)
 import Data.List (stripPrefix)
+import Data.String (IsString(..))
 import Text.Zwaluw.Core
 import Text.Zwaluw.Pos
 import Text.Zwaluw.Combinators
@@ -58,8 +59,9 @@ instance ErrorPosition RouteError where
     getPosition (RouteError mPos _) = mPos
 
 data ErrorMsg
-    = InvalidLit String String
-    | PredFail Char
+    = Expected String String -- expected, got
+    | CharPredFail Char
+    | StringPredFail String
     | RouteEOF
     | RouteEOS
     | Other String
@@ -70,20 +72,12 @@ instance ErrorList RouteError where
 -}
 instance Error RouteError where
     strMsg s = RouteError Nothing (Other s)
-{-
-throwRouteError :: (MonadState XYPos m, MonadError RouteError m) => ErrorMsg -> m b
-throwRouteError e =
-    do pos <- get
-       throwError (RouteError (Just pos) e)
--}
 
 throwRouteError pos e = [Left (RouteError (Just pos) e)]
 
 
-{-
-instance a ~ b => IsString (Router RouteError a b) where
+instance a ~ b => IsString (Router RouteError [String] a b) where
   fromString = lit
--}
 
 -- | Routes a constant string.
 lit :: String -> Router RouteError [String] r r
@@ -97,8 +91,15 @@ lit l = Router pf sf
                    (Just p') -> 
                        do [Right ((id, p':ps), addX 1 pos)]
                    Nothing -> 
-                       throwRouteError pos (InvalidLit p l)
+                       throwRouteError pos (Expected l p)
       sf b = [(( \(s:ss) -> ((l ++ s) : ss)), b)]
+
+infix  0 <?>
+(<?>) :: Router RouteError tok a b -> String -> Router RouteError tok a b
+router <?> msg = 
+    router { prs = Parser $ \tok pos ->
+        map (either (\(RouteError mPos _) -> Left $ RouteError mPos (Other msg)) Right) (runParser (prs router) tok pos) }
+
 
 infixr 9 </>
 (</>) :: Router RouteError [String] b c -> Router RouteError [String] a b -> Router RouteError [String] a c
@@ -123,15 +124,34 @@ satisfy p = val
              | p c -> 
                  do [Right ((c, cs : ss), addX 1 pos )]
              | otherwise -> 
-                 do throwRouteError pos (PredFail c)
+                 do throwRouteError pos (CharPredFail c)
   )
   (\c -> [ \paths -> case paths of [] -> [[c]] ; (s:ss) -> ((c:s):ss) | p c ])
 
-digit :: Router RouteError [String] r (Char :- r)
-digit = satisfy isDigit
+satisfyStr :: (String -> Bool) -> Router RouteError [String] r (String :- r)
+satisfyStr p = val
+  (Parser $ \tok pos -> 
+       case tok of
+         []          -> throwRouteError pos RouteEOF
+         ("":ss)     -> throwRouteError pos RouteEOS
+         (s:ss)
+             | p s -> 
+                 do [Right ((s, ss), addY 1 pos )]
+             | otherwise -> 
+                 do throwRouteError pos (StringPredFail s)
+  )
+  (\str -> [ \paths -> case paths of [] -> [str] ; (s:ss) -> ((str++s):ss) | p str ])
 
+
+digit :: Router RouteError [String] r (Char :- r)
+digit = satisfy isDigit <?> "Expected a digit 0-9"
+
+-- | matches alphabetic Unicode characters (lower-case, upper-case and title-case letters, plus letters of caseless scripts and modifiers letters).  (Uses 'isAlpha')
 alpha :: Router RouteError [String] r (Char :- r)
-alpha = satisfy isAlpha
+alpha = satisfy isAlpha <?> "expected an alphabetic Unicode character"
+
+anyChar :: Router RouteError [String] r (Char :- r)
+anyChar = satisfy (const True)
 
 char :: Char -> Router RouteError [String] r (Char :- r)
 char c = satisfy (== c)
@@ -151,6 +171,11 @@ string = val ps ss
              (s:ss) -> [Right ((s, ss), addY 1 pos)]
       ss str = [\ss -> str : ss]
 
+-- | @r \`printAs\` s@ uses ther serializer of @r@ to test if serializing succeeds,
+--   and if it does, instead serializes as @s@. 
+printAs :: Router e [String] a b -> String -> Router e [String] a b
+printAs r s = r { ser = map (first (const (s :))) . take 1 . ser r }
+
 toSite :: ((url -> [(String, String)] -> String) -> url -> a) 
        -> Router RouteError [String] () (url :- ()) 
        -> Site url a
@@ -160,72 +185,12 @@ toSite handler r@(Router pf sf) =
              case unparse1 [] r url of
                Nothing -> error "formatPathSegments failed to produce a url"
                (Just ps) -> (ps, [])
-         , parsePathSegments = \paths -> 
-                               let results = parse r paths
-                               in
-                                 case [ a | (Right (a,[])) <- results ] of
-                                   ((u :- ()):_) -> Right u
-                                   _             -> Left $ show $ bestErrors [ e | Left e <- results ]
+         , parsePathSegments = mapLeft show . (parse1 isComplete r)
          }
-
-{-
--- | @r \`printAs\` s@ uses ther serializer of @r@ to test if serializing succeeds,
---   and if it does, instead serializes as @s@. 
-printAs :: Router a b -> String -> Router a b
-printAs r s = r { ser = map (first (const (s ++))) . take 1 . ser r }
-
-readEither :: (Read a) => [String] -> StateT ErrorPos (Either RouteError) [(a, [String])]
-readEither [] = throwRouteError RouteEOF
-readEither (p:ps) = 
-          case reads p of
-            [] -> throwRouteError (Other $ "readEither failed on " ++ p)
-            rs -> Right $ map (\(a,p') -> (a, p':ps)) rs
-
-
-
-
--- | Routes any value that has a Show and Read instance.
-readshow :: (Show a, Read a) => Router [String] r (a :- r)
-readshow = val readEither showEither
-
-
-showEither :: (Show a) => a -> Either e [[String] -> [String]]
-showEither a = Right [\(s:ss) -> (shows a s) : ss ]
-
--- | Routes any integer.
-int :: Router [String] r (Int :- r)
-int = readshow
-
--- | Routes any string.
-string :: Router [String] r (String :- r)
-string = val ps ss 
     where
-      ps [] = routeError RouteEOF
-      ps (h:t) = return [(h, ("" : t))]
-      ss str = return [\(s:ss) -> (str ++ s) : ss]
+      mapLeft f = either (Left . f) Right
 
--- | Routes one string satisfying the given predicate.
-satisfy :: (String -> Bool) -> Router [String] r (String :- r)
-satisfy p = val ps ss
-    where
-      ps []    = routeError RouteEOF
-      ps (h:t) = if p h
-                 then return [(h, t)]
-                 else Left $ strMsg ("predicate failed on " ++ h)
-      ss s = if p s
-             then return [([s] ++)]
-             else Left (strMsg $ "predicate failed on " ++ s)
-infixr 9 </>
-(</>) :: Router [String] b c -> Router [String] a b -> Router [String] a c
-f </> g = f . eops . g
-
-eops :: Router [String] r r
-eops = Router 
-       (\path -> case path of
-                   []      -> return   [(id, [])]
-                   ("":ps) -> return [(id, ps)]
-                   (p:_) -> Left $ strMsg $ "path-segment not entirely consumed: " ++ p)
-       (\a -> return [(("" :), a)])
-
-
--}
+isComplete :: [String] -> Bool
+isComplete []   = True
+isComplete [""] = True
+isComplete _    = False

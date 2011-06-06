@@ -62,3 +62,217 @@ liftEither (Right as) = ListT (StateT $ \s -> Right (as, s))
 
 liftEitherP :: (tok -> Either RouteError [(a, tok)]) -> Parser RouteError tok a
 liftEitherP e = Parser $ \tok -> liftEither (e tok)
+
+{-
+      (Left e)   -> Left e
+      (Right []) -> Left (strMsg "unparse1: no valid unparsing")
+      (Right (s:_)) -> Right s
+-}
+
+{-
+data Router tok a b = Router
+  { prs :: tok -> Either RouteError [(a -> b, tok)]
+  , ser :: b -> Either RouteError [(tok -> tok, a)]
+  }
+
+
+routeError :: ErrorMsg -> Either RouteError b
+routeError e = Left (RouteError Nothing e)
+-}
+
+
+
+{-
+mapRouteError :: (e -> e') -> Router e a b -> Router e' a b
+mapRouteError f (Router pf sf) =
+    Router (\a -> either (Left . f) (Right . id) (pf a))
+           (\b -> either (Left . f) (Right . id) (sf b))
+
+instance Category (Router tok) where
+  id = Router
+    (\x -> return [(id, x)])
+    (\x -> return [(id, x)])
+
+  ~(Router pf sf) . ~(Router pg sg) = Router 
+    (compose (.) pf pg)
+    (compose (.) sf sg) 
+-} 
+{-
+    Parser $ \tok ->
+        do (f, tok')  <- runParser mf tok
+           (g, tok'') <- runParser mg tok'
+           return (f `op` g, tok'')
+-}
+
+
+{-
+instance Applicative (Parser e tok) where
+    pure =         
+        Parser $ \tok pos ->
+            [Right ((a, tok), pos)]
+    (Parser f) >>= (Parser x) =
+        Parser $ \tok pos ->
+            concat [ (runParser (f a)) tok' pos' | Right ((a, tok'), pos') <- f tok pos ]
+-}
+
+    
+
+                         
+        
+    
+
+-- type P pos e tok a = tok -> pos -> [Either e ((a, tok), pos)]
+
+
+
+{-
+instance Monad (Parser e tok) where
+    return a = Parser $ \tok -> return (a, tok)
+    (Parser p) >>= f =
+        Parser $ \tok ->
+            do (a, tok') <- p tok
+               (b, tok'') <- runParser (f a) tok'
+               return (b, tok'')
+
+instance MonadPlus (Parser e tok) where
+    mzero = Parser $ \tok -> ListT $ return []
+    (Parser x) `mplus` (Parser y) =
+        Parser $ \tok -> 
+            ListT $ StateT $ \st ->
+                case runStateT (runListT (x tok)) st of
+                  (Left _) -> 
+                      runStateT (runListT (y tok)) st
+                  (Right (a, st')) ->
+                      case runStateT (runListT (y tok)) st of
+                        (Left _) -> Right (a, st')
+                        (Right (b, st'')) -> Right (a ++ b, st'')
+
+instance Applicative (Parser e tok) where
+    pure    = return
+    f <*> x = f `ap` x
+
+
+composeP
+  :: (a -> b -> c)
+  -> Parser e tok a
+  -> Parser e tok b
+  -> Parser e tok c
+composeP op mf mg = 
+    Parser $ \tok ->
+        do (f, tok')  <- runParser mf tok
+           (g, tok'') <- runParser mg tok'
+           return (f `op` g, tok'')
+
+bind :: Either e [a] -> (a -> Either e [b]) -> Either e [b]
+bind (Left e) _ = (Left e)
+bind (Right l) f =
+    case partitionEithers (map f l) of
+      ([], []) -> Right []
+      (errs,[]) -> Left (last errs)
+      (_, succ) -> Right (concat succ)
+composeE
+  :: (a -> b -> c)
+  -> (i -> Either e [(a, j)])
+  -> (j -> Either e [(b, k)])
+  -> (i -> Either e [(c, k)])
+composeE op mf mg = \s ->
+  case mf s of
+    (Left e) -> (Left e)
+    (Right fs) ->
+        case partitionEithers [ fmap (map (first (op f))) (mg s') | (f, s') <- fs  ] of
+          ([], []) -> Right []
+          (errs,[]) -> Left (last errs)
+          (_, succs) -> Right (concat succs)
+
+
+-}{-
+    case partitionEithers $ runParser (prs p) s initialPos of
+      ([], [])   -> Right []
+      (errs, []) -> Left $ errs
+      (_, fs)    -> Right [ (f (), tok) | ((f, tok),_) <- fs ]
+-}
+
+{-
+parse :: (Position (Pos e)) => Router e tok () a -> tok -> Either [e] [(a, tok)]
+parse p s = 
+    case partitionEithers $ runParser (prs p) s initialPos of
+      ([], [])   -> Right []
+      (errs, []) -> Left $ errs
+      (_, fs)    -> Right [ (f (), tok) | ((f, tok),_) <- fs ]
+-}
+
+--      (Left errs)     -> Left errs
+--      (Right fs) -> Right [ (f (), tok) | (f, tok) <- fs ]
+{-
+
+parse1 :: (Error e, Position (Pos e)) => Router e tok () (a :- ()) -> tok -> Either [e] a
+parse1 p s = 
+    case parse p s of 
+      (Left e) -> (Left e)
+      (Right as) -> 
+          case map (hhead . fst) as of
+            [] -> Left [strMsg "no complete parses."]
+            (a:_) -> Right a
+-}
+
+{-
+-- | @r \`printAs\` s@ uses ther serializer of @r@ to test if serializing succeeds,
+--   and if it does, instead serializes as @s@. 
+printAs :: Router a b -> String -> Router a b
+printAs r s = r { ser = map (first (const (s ++))) . take 1 . ser r }
+
+readEither :: (Read a) => [String] -> StateT ErrorPos (Either RouteError) [(a, [String])]
+readEither [] = throwRouteError RouteEOF
+readEither (p:ps) = 
+          case reads p of
+            [] -> throwRouteError (Other $ "readEither failed on " ++ p)
+            rs -> Right $ map (\(a,p') -> (a, p':ps)) rs
+
+
+
+
+-- | Routes any value that has a Show and Read instance.
+readshow :: (Show a, Read a) => Router [String] r (a :- r)
+readshow = val readEither showEither
+
+
+showEither :: (Show a) => a -> Either e [[String] -> [String]]
+showEither a = Right [\(s:ss) -> (shows a s) : ss ]
+
+-- | Routes any integer.
+int :: Router [String] r (Int :- r)
+int = readshow
+
+-- | Routes any string.
+string :: Router [String] r (String :- r)
+string = val ps ss 
+    where
+      ps [] = routeError RouteEOF
+      ps (h:t) = return [(h, ("" : t))]
+      ss str = return [\(s:ss) -> (str ++ s) : ss]
+
+-- | Routes one string satisfying the given predicate.
+satisfy :: (String -> Bool) -> Router [String] r (String :- r)
+satisfy p = val ps ss
+    where
+      ps []    = routeError RouteEOF
+      ps (h:t) = if p h
+                 then return [(h, t)]
+                 else Left $ strMsg ("predicate failed on " ++ h)
+      ss s = if p s
+             then return [([s] ++)]
+             else Left (strMsg $ "predicate failed on " ++ s)
+infixr 9 </>
+(</>) :: Router [String] b c -> Router [String] a b -> Router [String] a c
+f </> g = f . eops . g
+
+eops :: Router [String] r r
+eops = Router 
+       (\path -> case path of
+                   []      -> return   [(id, [])]
+                   ("":ps) -> return [(id, ps)]
+                   (p:_) -> Left $ strMsg $ "path-segment not entirely consumed: " ++ p)
+       (\a -> return [(("" :), a)])
+
+
+-}
