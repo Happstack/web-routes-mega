@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, TypeOperators, ScopedTypeVariables #-}
 import Data.Monoid
-import Web.Routes hiding (showParseError)
+import Web.Routes
 import Web.Routes.Zwaluw
 import Text.Zwaluw.TH
 import Prelude hiding (id, (.), (/))

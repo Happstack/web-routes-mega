@@ -25,42 +25,42 @@ messageString RouteEOF           = "end of input"
 messageString RouteEOS           = "end of segment"
 messageString (Message s)        = s
 
-data ParseError pos = ParseError (Maybe pos) [ErrorMsg]
+data ParserError pos = ParserError (Maybe pos) [ErrorMsg]
     deriving (Eq, Ord, Typeable, Data)
 
-type instance Pos (ParseError p) = p
+type instance Pos (ParserError p) = p
 
-instance ErrorPosition (ParseError p) where
-    getPosition (ParseError mPos _) = mPos
+instance ErrorPosition (ParserError p) where
+    getPosition (ParserError mPos _) = mPos
 
 
 {-
-instance ErrorList ParseError where
-    listMsg s = [ParseError Nothing (Other s)]
+instance ErrorList ParserError where
+    listMsg s = [ParserError Nothing (Other s)]
 -}
 
-instance Error (ParseError p) where
-    strMsg s = ParseError Nothing [Message s]
+instance Error (ParserError p) where
+    strMsg s = ParserError Nothing [Message s]
 
-mkParseError :: pos -> [ErrorMsg] -> [Either (ParseError pos) a]
-mkParseError pos e = [Left (ParseError (Just pos) e)]
+mkParserError :: pos -> [ErrorMsg] -> [Either (ParserError pos) a]
+mkParserError pos e = [Left (ParserError (Just pos) e)]
 
 
 infix  0 <?>
 
 -- | annotate a parse error with an additional 'Expect' message
-(<?>) :: PrinterParser (ParseError p) tok a b -> String -> PrinterParser (ParseError p) tok a b
+(<?>) :: PrinterParser (ParserError p) tok a b -> String -> PrinterParser (ParserError p) tok a b
 router <?> msg = 
     router { prs = Parser $ \tok pos ->
-        map (either (\(ParseError mPos errs) -> Left $ ParseError mPos ((Expect msg) : errs)) Right) (runParser (prs router) tok pos) }
+        map (either (\(ParserError mPos errs) -> Left $ ParserError mPos ((Expect msg) : errs)) Right) (runParser (prs router) tok pos) }
 
--- | condense the 'ParseError's with the highest parse position into a single 'ParserError'
-condenseErrors :: (Ord pos) => [ParseError pos] -> ParseError pos
+-- | condense the 'ParserError's with the highest parse position into a single 'ParserError'
+condenseErrors :: (Ord pos) => [ParserError pos] -> ParserError pos
 condenseErrors errs = 
     case bestErrors errs of
-      [] -> ParseError Nothing []
-      errs'@(ParseError pos _ : _) ->
-          ParseError pos (nub $ concatMap (\(ParseError _ e) -> e) errs')
+      [] -> ParserError Nothing []
+      errs'@(ParserError pos _ : _) ->
+          ParserError pos (nub $ concatMap (\(ParserError _ e) -> e) errs')
 
 -- | Helper function for turning '[ErrorMsg]' into a user-friendly 'String'
 showErrorMessages :: String -> String -> String -> String -> String -> [ErrorMsg] -> String
@@ -105,14 +105,14 @@ showErrorMessages msgOr msgUnknown msgExpecting msgUnExpected msgEndOfInput msgs
 
       clean               = nub . filter (not . null)
 
-instance (Show pos) => Show (ParseError pos) where
-    show e = showParseError show e
+instance (Show pos) => Show (ParserError pos) where
+    show e = showParserError show e
 
 -- | turn a parse error into a user-friendly error message
-showParseError :: (pos -> String) -- ^ function to turn the error position into a 'String'
-               -> ParseError pos  -- ^ the 'ParseError'
+showParserError :: (pos -> String) -- ^ function to turn the error position into a 'String'
+               -> ParserError pos  -- ^ the 'ParserError'
                -> String
-showParseError showPos (ParseError mPos msgs) =
+showParserError showPos (ParserError mPos msgs) =
         let posStr = case mPos of
                        Nothing -> "unknown position"
                        (Just pos) -> showPos pos

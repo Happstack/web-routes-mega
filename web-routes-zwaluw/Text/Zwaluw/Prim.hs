@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, DeriveDataTypeable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, ScopedTypeVariables, TypeFamilies, TypeSynonymInstances, MultiParamTypeClasses, TypeOperators #-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, TypeOperators #-}
 module Text.Zwaluw.Prim
     ( -- * Types
     Parser(..), PrinterParser(..), (.~)
