@@ -6,17 +6,17 @@ module Text.Zwaluw.Combinators
     , rLeft, rRight, rEither, rNothing, rJust, rMaybe
     , rTrue, rFalse, rBool, rUnit
     )
-         where
+    where
 
-import Control.Arrow
-import Prelude hiding ((.), id, (/))
-import Control.Category
-import Control.Monad (guard)
+import Control.Arrow       (first, second)
+import Prelude             hiding ((.), id, (/))
+import Control.Category    (Category((.), id))
+import Control.Monad       (guard)
 import Control.Monad.Error (Error)
-import Data.Monoid
-import Text.Zwaluw.Prim
-import Text.Zwaluw.HList
-import Text.Zwaluw.TH
+import Data.Monoid         (Monoid(mappend))
+import Text.Zwaluw.Prim    (Parser(..), PrinterParser(..), (.~), val, xpure)
+import Text.Zwaluw.HList   ((:-)(..), arg, hhead)
+import Text.Zwaluw.TH      (derivePrinterParsers)
 
 infixr 8 <>
 

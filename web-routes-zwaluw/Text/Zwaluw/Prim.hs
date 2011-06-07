@@ -10,23 +10,16 @@ module Text.Zwaluw.Prim
     , xmaph
     ) where
 
-import Prelude          hiding ((.), id, (/))
-import Control.Applicative (Applicative(..))
-import Control.Arrow    (first, second)
-import Control.Category (Category((.), id))
-import Control.Monad    (MonadPlus(mzero, mplus))
-import Control.Monad.Error
-import Control.Monad.List
-import Control.Monad.State
-import Control.Monad.Trans
-import Data.Data        (Data, Typeable)
-import Data.Either      (partitionEithers)
-import Data.Function    (on)
-import Data.List        (stripPrefix)
-import Data.Monoid      (Monoid(mappend, mempty))
-import Data.String      (IsString(..))
-import Text.Zwaluw.HList
-import Text.Zwaluw.Pos
+import Prelude             hiding ((.), id)
+import Control.Arrow       (first)
+import Control.Category    (Category((.), id))
+import Control.Monad       (MonadPlus(mzero, mplus))
+import Control.Monad.Error (Error(..))
+import Data.Either         (partitionEithers)
+import Data.Function       (on)
+import Data.Monoid         (Monoid(mappend, mempty))
+import Text.Zwaluw.HList   ((:-)(..), hdMap, hdTraverse)
+import Text.Zwaluw.Pos     (ErrorPosition(..), InitialPosition(..), Pos)
 
 compose
   :: (a -> b -> c)
@@ -150,13 +143,13 @@ val rs ss = PrinterParser rs' ss'
       ss' =  (\(a :- r) -> map (\f -> (f, r)) (ss a))
 
 -- | Give all possible parses or errors.
-parse :: (Position (Pos e)) => PrinterParser e tok () a -> tok -> [Either e (a, tok)]
+parse :: (InitialPosition (Pos e)) => PrinterParser e tok () a -> tok -> [Either e (a, tok)]
 parse p s = 
     map (either Left (\((f, tok), _) -> Right (f (), tok))) $ runParser (prs p) s initialPos
 
 -- | Give the first parse, for PrinterParsers with a parser that yields just one value. 
 -- Otherwise return the error (or errors) with the highest error position.
-parse1 :: (ErrorPosition e, Position (Pos e), Show e, Ord (Pos e)) =>
+parse1 :: (ErrorPosition e, InitialPosition (Pos e), Show e, Ord (Pos e)) =>
      (tok -> Bool) -> PrinterParser e tok () (a :- ()) -> tok -> Either [e] a
 parse1 isComplete r paths = 
     let results = parse r paths

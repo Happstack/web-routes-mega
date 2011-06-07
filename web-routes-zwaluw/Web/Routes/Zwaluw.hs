@@ -6,9 +6,9 @@ module Web.Routes.Zwaluw
     , toSite
     ) where
 
-import Web.Routes (Site(..))
-import Text.Zwaluw
-import Text.Zwaluw.Strings
+import Text.Zwaluw          -- (PrinterParser(..), ParserError(..), (:-), condenseErrors, parse1, showParserError, unparse1)
+import Text.Zwaluw.Strings  -- (StringsPos(..), isComplete)
+import Web.Routes           (Site(..))
 
 type Router url = PrinterParser (ParserError StringsPos) [String] () (url :- ())
 

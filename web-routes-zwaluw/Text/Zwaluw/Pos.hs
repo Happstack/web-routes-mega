@@ -1,14 +1,21 @@
 {-# LANGUAGE DeriveDataTypeable, TypeFamilies #-}
-module Text.Zwaluw.Pos where
+module Text.Zwaluw.Pos
+    ( Pos
+    , InitialPosition(..)
+    , ErrorPosition(..)
+    , MajorMinorPos(..)
+    , addMajor, addMinor
+    ) 
+    where
 
-import Data.Data
+import Data.Data (Data, Typeable)
 
 type family Pos a :: *
 
 class ErrorPosition e where
     getPosition :: e -> Maybe (Pos e)
 
-class Position a where
+class InitialPosition a where
     initialPos :: a
 
 data MajorMinorPos = MajorMinorPos 
@@ -19,7 +26,7 @@ data MajorMinorPos = MajorMinorPos
 
 -- should this really be tied to the error type that uses it ?
 -- if so, that affects addY
-instance Position MajorMinorPos where
+instance InitialPosition MajorMinorPos where
     initialPos = MajorMinorPos 0 0
 
 addMajor :: (Integral i) => i -> MajorMinorPos -> MajorMinorPos

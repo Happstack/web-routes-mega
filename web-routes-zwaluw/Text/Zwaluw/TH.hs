@@ -1,11 +1,10 @@
 {-# LANGUAGE TemplateHaskell, TypeOperators #-}
 module Text.Zwaluw.TH (derivePrinterParsers) where
 
-import Control.Monad.Error (Error(strMsg))
 import Control.Monad       (liftM, replicateM)
-import Language.Haskell.TH
-import Text.Zwaluw.Prim
-import Text.Zwaluw.HList
+import Language.Haskell.TH 
+import Text.Zwaluw.HList   ((:-)(..), arg)
+import Text.Zwaluw.Prim    (xpure)
 
 -- | Derive routers for all constructors in a datatype. For example: 
 --

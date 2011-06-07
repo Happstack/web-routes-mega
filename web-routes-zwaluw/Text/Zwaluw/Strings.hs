@@ -1,54 +1,27 @@
 {-# LANGUAGE DeriveDataTypeable, FlexibleContexts, FlexibleInstances, TemplateHaskell, TypeFamilies, TypeOperators #-}
 module Text.Zwaluw.Strings
-{-
     (
-    -- * Types
-    PrinterParser, RouteError(..), (:-)(..), (<>), (.~)
-    
-    -- * Running routers
-  , parse, unparse
---  , parse1, unparse1
-    
-    -- * PrinterParser combinators
-  , pure, xmap, xmaph
-  , val, readshow, lit, push
-  , opt, duck, satisfy, rFilter, printAs
-  , manyr, somer, chainr, chainr1 
-  , manyl, somel, chainl, chainl1
-  
-    -- * Built-in routers
-  , int, string -- ,char, digit, hexDigit
-  , (</>),
-  {-
-  , rNil, rCons, rList, rListSep
-  , rPair
-  , rLeft, rRight, rEither
-  , rNothing, rJust, rMaybe
-  , rTrue, rFalse
--}
-    ) -}
+    -- * Position information
+    StringsPos(..), addString, addChar
+    -- * Combinators
+    , (</>), alpha, anyChar, anyString, char, digit, eops, int
+    , integer, lit, satisfy, satisfyStr, space
+    -- * Misc
+    , isComplete
+    )
     where
 
-import Prelude hiding ((.), id, (/))
-import Control.Arrow (first)
-import Control.Monad (guard)
-import Control.Monad.State
--- import Control.Monad.Trans.Error (Error(..))
-import Control.Category
-import Control.Monad.Error
--- import Control.Monad.Trans.Error (ErrorList(..))
-import Data.Char
-import Data.Data
-import Data.Monoid
-import Data.Char (isDigit, isHexDigit, intToDigit, digitToInt)
-import Data.List (intercalate, sort, nub, stripPrefix)
-import Data.String (IsString(..))
-import Text.Zwaluw.Prim
-import Text.Zwaluw.Error
-import Text.Zwaluw.Pos
-import Text.Zwaluw.Combinators
-import Text.Zwaluw.HList
-import Text.Zwaluw.TH
+import Prelude                 hiding ((.), id, (/))
+import Control.Category        (Category((.), id))
+import Data.Char               (isAlpha, isDigit, isSpace)
+import Data.Data               (Data, Typeable)
+import Data.List               (stripPrefix)
+import Data.String             (IsString(..))
+import Text.Zwaluw.Combinators (opt, rCons, rList1)
+import Text.Zwaluw.Error       (ParserError(..),ErrorMsg(..), (<?>), mkParserError)
+import Text.Zwaluw.HList       ((:-)(..))
+import Text.Zwaluw.Pos         (InitialPosition(..))
+import Text.Zwaluw.Prim        (Parser(..), PrinterParser(..), xmaph, val)
 
 data StringsPos = StringsPos 
     { string    :: Integer 
@@ -59,7 +32,7 @@ data StringsPos = StringsPos
 instance Show StringsPos where
     show (StringsPos s c) = "string " ++ show s ++ ", character " ++ show c
 
-instance Position StringsPos where
+instance InitialPosition StringsPos where
     initialPos = StringsPos 0 0
 
 addString :: (Integral i) => i -> StringsPos -> StringsPos
