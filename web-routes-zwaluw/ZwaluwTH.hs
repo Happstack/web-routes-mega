@@ -34,32 +34,6 @@ sitemap =
     users  =  lit "/" . rUserOverview
            <> rUserDetail </> int
 
-toSite :: forall a r url. ((url -> [(String, String)] -> String) -> url -> a) 
-       -> Router RouteError [String] () (url :- ()) 
-       -> Site url a
-toSite handler r@(Router pf sf) =
-    Site { handleSite = handler
-         , formatPathSegments =  \url ->
-             case unparse1 [] r url of
-               Nothing -> error "formatPathSegments failed to produce a url"
-               (Just ps) -> (ps, [])
-         , parsePathSegments = \paths -> 
-                               let results = parse r paths
-                               in
-                                 case [ a | (Right (a,[])) <- results ] of
-                                   ((u :- ()):_) -> Right u
-                                   _             -> Left $ show $ bestErrors [ e | Left e <- results ]
-                                   
-{-
-                               case  of
-                                 (Left e) -> Left (show $ bestErrors e)
-                                 (Right as) ->
-                                     case [ a | (a, []) <- as ] of
-                                       [] -> Left $ "No complete parses found."
-                                       ((u :- ()):_) -> Right u
--}
-         }
-
 site :: Site Sitemap (IO ())
 site = toSite web sitemap
 

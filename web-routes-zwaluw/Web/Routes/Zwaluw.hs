@@ -41,7 +41,7 @@ import Data.Char
 import Data.Data
 import Data.Monoid
 import Data.Char (isDigit, isHexDigit, intToDigit, digitToInt)
-import Data.List (stripPrefix)
+import Data.List (intercalate, sort, nub, stripPrefix)
 import Data.String (IsString(..))
 import Text.Zwaluw.Core
 import Text.Zwaluw.Pos
@@ -50,8 +50,8 @@ import Text.Zwaluw.HList
 import Text.Zwaluw.TH
 import Web.Routes (Site(..))
 
-data RouteError = RouteError (Maybe XYPos) ErrorMsg
-    deriving (Eq, Ord, Read, Show, Typeable, Data)
+data RouteError = RouteError (Maybe XYPos) [ErrorMsg]
+    deriving (Eq, Read, Show, Ord, Typeable, Data)
 
 type instance Pos RouteError = XYPos
 
@@ -59,25 +59,34 @@ instance ErrorPosition RouteError where
     getPosition (RouteError mPos _) = mPos
 
 data ErrorMsg
-    = Expected String String -- expected, got
-    | CharPredFail Char
-    | StringPredFail String
+    = SysUnExpect String
+    | UnExpect String
+    | Expect String
+    | Message String
     | RouteEOF
     | RouteEOS
-    | Other String
       deriving (Eq, Ord, Read, Show, Typeable, Data)
+
+messageString :: ErrorMsg -> String
+messageString (Expect s)         = s
+messageString (UnExpect s)       = s
+messageString (SysUnExpect s)    = s
+messageString RouteEOF           = "end of input"
+messageString RouteEOS           = "end of segment"
+messageString (Message s)        = s
+
 {-
 instance ErrorList RouteError where
     listMsg s = [RouteError Nothing (Other s)]
 -}
 instance Error RouteError where
-    strMsg s = RouteError Nothing (Other s)
+    strMsg s = RouteError Nothing [Message s]
 
 throwRouteError pos e = [Left (RouteError (Just pos) e)]
 
 
-instance a ~ b => IsString (Router RouteError [String] a b) where
-  fromString = lit
+-- instance a ~ b => IsString (Router RouteError [String] a b) where
+--  fromString = lit
 
 -- | Routes a constant string.
 lit :: String -> Router RouteError [String] r r
@@ -85,20 +94,22 @@ lit l = Router pf sf
     where
       pf = Parser $ \tok pos ->
            case tok of
-             [] -> throwRouteError pos RouteEOF
+             [] -> throwRouteError pos [RouteEOF]
+             ("":_) | (not $ null l) -> throwRouteError pos [RouteEOS]
              (p:ps) ->
                  case stripPrefix l p of
                    (Just p') -> 
-                       do [Right ((id, p':ps), addX 1 pos)]
+                       do [Right ((id, p':ps), addY (length l) pos)]
                    Nothing -> 
-                       throwRouteError pos (Expected l p)
+                       throwRouteError pos [UnExpect (show p), Expect (show l)]
       sf b = [(( \(s:ss) -> ((l ++ s) : ss)), b)]
+
 
 infix  0 <?>
 (<?>) :: Router RouteError tok a b -> String -> Router RouteError tok a b
 router <?> msg = 
     router { prs = Parser $ \tok pos ->
-        map (either (\(RouteError mPos _) -> Left $ RouteError mPos (Other msg)) Right) (runParser (prs router) tok pos) }
+        map (either (\(RouteError mPos errs) -> Left $ RouteError mPos ((Expect msg) : errs)) Right) (runParser (prs router) tok pos) }
 
 
 infixr 9 </>
@@ -111,63 +122,65 @@ eops = Router
                    []      -> [Right ((id, []), pos)]
                    ("":ps) -> 
                           [ Right ((id, ps), addY 1 pos) ]
-                   (p:_) -> throwRouteError pos (Other $ "path-segment not entirely consumed: " ++ p))
+                   (p:_) -> throwRouteError pos [Message $ "path-segment not entirely consumed: " ++ p])
        (\a -> [(("" :), a)])
 
 satisfy :: (Char -> Bool) -> Router RouteError [String] r (Char :- r)
 satisfy p = val
   (Parser $ \tok pos -> 
        case tok of
-         []          -> throwRouteError pos RouteEOF
-         ("":ss)     -> throwRouteError pos RouteEOS
+         []          -> throwRouteError pos [RouteEOF]
+         ("":ss)     -> throwRouteError pos [RouteEOS]
          ((c:cs):ss)
              | p c -> 
                  do [Right ((c, cs : ss), addX 1 pos )]
              | otherwise -> 
-                 do throwRouteError pos (CharPredFail c)
+                 do throwRouteError pos [SysUnExpect [c]]
   )
   (\c -> [ \paths -> case paths of [] -> [[c]] ; (s:ss) -> ((c:s):ss) | p c ])
 
+
+-- check that the remainder of the 'String' in this segment satisfies a prefix
 satisfyStr :: (String -> Bool) -> Router RouteError [String] r (String :- r)
 satisfyStr p = val
   (Parser $ \tok pos -> 
        case tok of
-         []          -> throwRouteError pos RouteEOF
-         ("":ss)     -> throwRouteError pos RouteEOS
+         []          -> throwRouteError pos [RouteEOF]
+         ("":ss)     -> throwRouteError pos [RouteEOS]
          (s:ss)
              | p s -> 
-                 do [Right ((s, ss), addY 1 pos )]
+                 do [Right ((s, "":ss), addY 1 pos )]
              | otherwise -> 
-                 do throwRouteError pos (StringPredFail s)
+                 do throwRouteError pos [SysUnExpect s]
   )
   (\str -> [ \paths -> case paths of [] -> [str] ; (s:ss) -> ((str++s):ss) | p str ])
 
 
 digit :: Router RouteError [String] r (Char :- r)
-digit = satisfy isDigit <?> "Expected a digit 0-9"
+digit = satisfy isDigit <?> "a digit 0-9"
 
 -- | matches alphabetic Unicode characters (lower-case, upper-case and title-case letters, plus letters of caseless scripts and modifiers letters).  (Uses 'isAlpha')
 alpha :: Router RouteError [String] r (Char :- r)
-alpha = satisfy isAlpha <?> "expected an alphabetic Unicode character"
+alpha = satisfy isAlpha <?> "an alphabetic Unicode character"
 
 anyChar :: Router RouteError [String] r (Char :- r)
 anyChar = satisfy (const True)
 
 char :: Char -> Router RouteError [String] r (Char :- r)
-char c = satisfy (== c)
+char c = satisfy (== c) <?> show [c]
 
 int :: Router RouteError [String] r (Int :- r)
 int = xmaph read (Just . show) (opt (rCons . char '-') . (rList1 digit))
 
 -- | Routes any string.
 -- FIXME: not sure the ss function is really doing the right thing
-string :: Router RouteError [String] r (String :- r)
-string = val ps ss 
+anyString :: Router RouteError [String] r (String :- r)
+anyString = val ps ss 
     where
       ps = Parser $ \tok pos ->
            case tok of
-             []     -> throwRouteError pos RouteEOF
-             ("":_) -> throwRouteError pos RouteEOS
+             []     -> throwRouteError pos [RouteEOF]
+             ("":_) -> throwRouteError pos [RouteEOS]
              (s:ss) -> [Right ((s, ss), addY 1 pos)]
       ss str = [\ss -> str : ss]
 
@@ -194,3 +207,62 @@ isComplete :: [String] -> Bool
 isComplete []   = True
 isComplete [""] = True
 isComplete _    = False
+
+condenseErrors :: [RouteError] -> RouteError
+condenseErrors errs = 
+    case bestErrors errs of
+      [] -> RouteError Nothing []
+      errs'@(RouteError pos _ : _) ->
+          RouteError pos (nub $ concatMap (\(RouteError _ e) -> e) errs')
+
+showErrorMessages :: String -> String -> String -> String -> String -> [ErrorMsg] -> String
+showErrorMessages msgOr msgUnknown msgExpecting msgUnExpected msgEndOfInput msgs
+    | null msgs = msgUnknown
+    | otherwise = intercalate ("; ") $ clean $  [showSysUnExpect, showUnExpect, showExpect, showMessages] -- , showExpect, showMessages]
+    where
+      isSysUnExpect (SysUnExpect {}) = True
+      isSysUnExpect _                = False
+
+      isUnExpect (UnExpect {})       = True
+      isUnExpect _                   = False
+
+      isExpect (Expect {})           = True
+      isExpect _                     = False
+
+      (sysUnExpect,msgs1) = span isSysUnExpect (sort msgs)
+      (unExpect   ,msgs2) = span isUnExpect msgs1
+      (expect     ,msgs3) = span isExpect msgs2
+
+      showExpect      = showMany msgExpecting expect
+      showUnExpect    = showMany msgUnExpected unExpect
+      showSysUnExpect 
+          | null sysUnExpect = ""
+          | otherwise        = msgUnExpected ++ " " ++ (messageString $ head sysUnExpect)
+      showMessages      = showMany "" msgs3
+
+      showMany pre msgs = case clean (map messageString msgs) of
+                            [] -> ""
+                            ms | null pre  -> commasOr ms
+                               | otherwise -> pre ++ " " ++ commasOr ms
+
+      commasOr []         = ""
+      commasOr [m]        = m
+      commasOr ms         = commaSep (init ms) ++ " " ++ msgOr ++ " " ++ last ms
+
+      commaSep            = seperate ", " . clean
+
+      seperate   _ []     = ""
+      seperate   _ [m]    = m
+      seperate sep (m:ms) = m ++ sep ++ seperate sep ms
+
+      clean               = nub . filter (not . null)
+      
+
+-- instance Show RouteError where
+showRouteError strs (RouteError mPos msgs) =
+        let posStr = case mPos of
+                       Nothing -> "unknown position"
+                       (Just (XYPos s c)) -> "segment " ++ show s ++ ", character " ++ show c
+        in "parse error at " ++ posStr ++ ": " ++ (showErrorMessages "or" "unknown parse error" "expecting" "unexpected" "end of input" msgs) ++
+           " while parsing segments " ++ show strs
+        

@@ -137,3 +137,5 @@ $(deriveRouters ''Bool)
 rTrue  :: Router e tok r (Bool :- r)
 rFalse :: Router e tok r (Bool :- r)
 
+rUnit :: Router e tok r (() :- r)
+rUnit = xpure ((:-) ()) (\ (() :- x) -> Just x)

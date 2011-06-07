@@ -14,13 +14,15 @@ class Position a where
 data XYPos = XYPos Integer Integer
       deriving (Eq, Ord, Read, Show, Typeable, Data)
 
+-- should this really be tied to the error type that uses it ?
+-- if so, that affects addY
 instance Position XYPos where
-    initialPos = XYPos 0 1
+    initialPos = XYPos 1 1
 
 addX :: (Integral i) => i -> XYPos -> XYPos
 addX i (XYPos x y) = XYPos (x + (fromIntegral i)) y
 
 addY :: (Integral i) => i -> XYPos -> XYPos
-addY i (XYPos x y) = XYPos 0 (y + (fromIntegral i))
+addY i (XYPos x y) = XYPos 1 (y + (fromIntegral i))
 
 
