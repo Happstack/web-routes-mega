@@ -1,19 +1,12 @@
+-- | An Error handling scheme that can be used with 'PrinterParser'
 {-# LANGUAGE DeriveDataTypeable, TypeFamilies #-}
 module Text.Zwaluw.Error where
 
 import Control.Monad.Error (Error(..))
 import Data.Data (Data, Typeable)
 import Data.List (intercalate, sort, nub)
-import Text.Zwaluw.Core
+import Text.Zwaluw.Prim
 import Text.Zwaluw.Pos
-
-data RouteError = RouteError (Maybe XYPos) [ErrorMsg]
-    deriving (Eq, Read, Show, Ord, Typeable, Data)
-
-type instance Pos RouteError = XYPos
-
-instance ErrorPosition RouteError where
-    getPosition (RouteError mPos _) = mPos
 
 data ErrorMsg
     = SysUnExpect String
@@ -32,32 +25,48 @@ messageString RouteEOF           = "end of input"
 messageString RouteEOS           = "end of segment"
 messageString (Message s)        = s
 
-{-
-instance ErrorList RouteError where
-    listMsg s = [RouteError Nothing (Other s)]
--}
-instance Error RouteError where
-    strMsg s = RouteError Nothing [Message s]
+data ParseError pos = ParseError (Maybe pos) [ErrorMsg]
+    deriving (Eq, Ord, Typeable, Data)
 
-throwRouteError pos e = [Left (RouteError (Just pos) e)]
+type instance Pos (ParseError p) = p
+
+instance ErrorPosition (ParseError p) where
+    getPosition (ParseError mPos _) = mPos
+
+
+{-
+instance ErrorList ParseError where
+    listMsg s = [ParseError Nothing (Other s)]
+-}
+
+instance Error (ParseError p) where
+    strMsg s = ParseError Nothing [Message s]
+
+mkParseError :: pos -> [ErrorMsg] -> [Either (ParseError pos) a]
+mkParseError pos e = [Left (ParseError (Just pos) e)]
+
 
 infix  0 <?>
-(<?>) :: Router RouteError tok a b -> String -> Router RouteError tok a b
+
+-- | annotate a parse error with an additional 'Expect' message
+(<?>) :: PrinterParser (ParseError p) tok a b -> String -> PrinterParser (ParseError p) tok a b
 router <?> msg = 
     router { prs = Parser $ \tok pos ->
-        map (either (\(RouteError mPos errs) -> Left $ RouteError mPos ((Expect msg) : errs)) Right) (runParser (prs router) tok pos) }
+        map (either (\(ParseError mPos errs) -> Left $ ParseError mPos ((Expect msg) : errs)) Right) (runParser (prs router) tok pos) }
 
-condenseErrors :: [RouteError] -> RouteError
+-- | condense the 'ParseError's with the highest parse position into a single 'ParserError'
+condenseErrors :: (Ord pos) => [ParseError pos] -> ParseError pos
 condenseErrors errs = 
     case bestErrors errs of
-      [] -> RouteError Nothing []
-      errs'@(RouteError pos _ : _) ->
-          RouteError pos (nub $ concatMap (\(RouteError _ e) -> e) errs')
+      [] -> ParseError Nothing []
+      errs'@(ParseError pos _ : _) ->
+          ParseError pos (nub $ concatMap (\(ParseError _ e) -> e) errs')
 
+-- | Helper function for turning '[ErrorMsg]' into a user-friendly 'String'
 showErrorMessages :: String -> String -> String -> String -> String -> [ErrorMsg] -> String
 showErrorMessages msgOr msgUnknown msgExpecting msgUnExpected msgEndOfInput msgs
     | null msgs = msgUnknown
-    | otherwise = intercalate ("; ") $ clean $  [showSysUnExpect, showUnExpect, showExpect, showMessages] -- , showExpect, showMessages]
+    | otherwise = intercalate ("; ") $ clean $  [showSysUnExpect, showUnExpect, showExpect, showMessages]
     where
       isSysUnExpect (SysUnExpect {}) = True
       isSysUnExpect _                = False
@@ -96,9 +105,15 @@ showErrorMessages msgOr msgUnknown msgExpecting msgUnExpected msgEndOfInput msgs
 
       clean               = nub . filter (not . null)
 
--- instance Show RouteError where
-showRouteError (RouteError mPos msgs) =
+instance (Show pos) => Show (ParseError pos) where
+    show e = showParseError show e
+
+-- | turn a parse error into a user-friendly error message
+showParseError :: (pos -> String) -- ^ function to turn the error position into a 'String'
+               -> ParseError pos  -- ^ the 'ParseError'
+               -> String
+showParseError showPos (ParseError mPos msgs) =
         let posStr = case mPos of
                        Nothing -> "unknown position"
-                       (Just (XYPos c s)) -> "segment " ++ show s ++ ", character " ++ show c
+                       (Just pos) -> showPos pos
         in "parse error at " ++ posStr ++ ": " ++ (showErrorMessages "or" "unknown parse error" "expecting" "unexpected" "end of input" msgs)

@@ -1,5 +1,8 @@
 {-# LANGUAGE TypeOperators #-}
-module Text.Zwaluw.HList where
+module Text.Zwaluw.HList 
+    ( (:-)(..)
+    , arg, hdTraverse, hdMap, hhead, htail, pop 
+    ) where
 
 infixr 8 :-
 -- | A stack datatype. Just a better looking tuple.

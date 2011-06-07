@@ -5,9 +5,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Web.Zwaluw.Regular 
-  ( mkRouters
-  , Routers
-  , RouterList(..)
+  ( mkPrinterParsers
+  , PrinterParsers
+  , PrinterParserList(..)
   
   -- * Re-exported from Generics.Regular
   , deriveAll
@@ -21,26 +21,26 @@ import Generics.Regular
 
 
 -- | The type of the list of routers generated for type @r@.
-type Routers e r = RouterList e (PF r) r
+type PrinterParsers e r = PrinterParserList e (PF r) r
 
 -- | Creates the routers for type @r@, one for each constructor. For example:
 --
---   @Z rHome :& Z rUserOverview :& Z rUserDetail :& Z rArticle = mkRouters@
-mkRouters :: (MkRouters (PF r), Regular r) => Routers e r
-mkRouters = mkRouters' to (Right . from)
+--   @Z rHome :& Z rUserOverview :& Z rUserDetail :& Z rArticle = mkPrinterParsers@
+mkPrinterParsers :: (MkPrinterParsers (PF r), Regular r) => PrinterParsers e r
+mkPrinterParsers = mkPrinterParsers' to (Right . from)
 
-data family RouterList e f r
-class MkRouters (f :: * -> *) where
-  mkRouters' :: (f r -> r) -> (r -> Either [e] (f r)) -> RouterList e f r
+data family PrinterParserList e f r
+class MkPrinterParsers (f :: * -> *) where
+  mkPrinterParsers' :: (f r -> r) -> (r -> Either [e] (f r)) -> PrinterParserList e f r
 
-data instance RouterList e (C c f) r = Z (forall t. Router e (RouterLhs f r t) (r :- t))
-instance MkRouter f => MkRouters (C c f) where
-  mkRouters' addLR matchLR = Z $ pure (hdMap (addLR . C) . mkP) (fmap mkS . hdTraverse (fmap unC . matchLR))
+data instance PrinterParserList e (C c f) r = Z (forall t. PrinterParser e (PrinterParserLhs f r t) (r :- t))
+instance MkPrinterParser f => MkPrinterParsers (C c f) where
+  mkPrinterParsers' addLR matchLR = Z $ pure (hdMap (addLR . C) . mkP) (fmap mkS . hdTraverse (fmap unC . matchLR))
 
-data instance RouterList e (f :+: g) r = RouterList e f r :& RouterList e g r
-instance (MkRouters f, MkRouters g) => MkRouters (f :+: g) where
-  mkRouters' addLR matchLR = mkRouters' (addLR . L) (matchL matchLR) 
-                          :& mkRouters' (addLR . R) (matchR matchLR)
+data instance PrinterParserList e (f :+: g) r = PrinterParserList e f r :& PrinterParserList e g r
+instance (MkPrinterParsers f, MkPrinterParsers g) => MkPrinterParsers (f :+: g) where
+  mkPrinterParsers' addLR matchLR = mkPrinterParsers' (addLR . L) (matchL matchLR) 
+                          :& mkPrinterParsers' (addLR . R) (matchR matchLR)
     where
       matchL :: (r -> Either [e] ((f :+: g) r)) -> r -> Either [e] (f r)
       matchL frm r = case frm r of 
@@ -53,28 +53,28 @@ instance (MkRouters f, MkRouters g) => MkRouters (f :+: g) where
 --        _ -> Nothing
 
 
-type family RouterLhs (f :: * -> *) (r :: *) (t :: *) :: *
-class MkRouter (f :: * -> *) where
-  mkP :: RouterLhs f r t -> (f r :- t)
-  mkS :: (f r :- t) -> RouterLhs f r t
+type family PrinterParserLhs (f :: * -> *) (r :: *) (t :: *) :: *
+class MkPrinterParser (f :: * -> *) where
+  mkP :: PrinterParserLhs f r t -> (f r :- t)
+  mkS :: (f r :- t) -> PrinterParserLhs f r t
 
-type instance RouterLhs U r t = t
-instance MkRouter U where
+type instance PrinterParserLhs U r t = t
+instance MkPrinterParser U where
   mkP t = U :- t
   mkS (U :- r) = r
 
-type instance RouterLhs (K a) r t = a :- t
-instance MkRouter (K a) where
+type instance PrinterParserLhs (K a) r t = a :- t
+instance MkPrinterParser (K a) where
   mkP (a :- t) = K a :- t
   mkS (K a :- t) = a :- t
 
-type instance RouterLhs I r t = r :- t
-instance MkRouter I where
+type instance PrinterParserLhs I r t = r :- t
+instance MkPrinterParser I where
   mkP (r :- t) = I r :- t
   mkS (I r :- t) = r :- t
 
-type instance RouterLhs (f :*: g) r t = RouterLhs f r (RouterLhs g r t)
-instance (MkRouter f, MkRouter g) => MkRouter (f :*: g) where
+type instance PrinterParserLhs (f :*: g) r t = PrinterParserLhs f r (PrinterParserLhs g r t)
+instance (MkPrinterParser f, MkPrinterParser g) => MkPrinterParser (f :*: g) where
   mkP t = (f :*: g) :- t''
     where 
       f :- t'  = mkP t

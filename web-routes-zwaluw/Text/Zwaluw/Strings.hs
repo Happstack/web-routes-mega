@@ -3,13 +3,13 @@ module Text.Zwaluw.Strings
 {-
     (
     -- * Types
-    Router, RouteError(..), (:-)(..), (<>), (.~)
+    PrinterParser, RouteError(..), (:-)(..), (<>), (.~)
     
     -- * Running routers
   , parse, unparse
 --  , parse1, unparse1
     
-    -- * Router combinators
+    -- * PrinterParser combinators
   , pure, xmap, xmaph
   , val, readshow, lit, push
   , opt, duck, satisfy, rFilter, printAs
@@ -43,117 +43,145 @@ import Data.Monoid
 import Data.Char (isDigit, isHexDigit, intToDigit, digitToInt)
 import Data.List (intercalate, sort, nub, stripPrefix)
 import Data.String (IsString(..))
-import Text.Zwaluw.Core
+import Text.Zwaluw.Prim
 import Text.Zwaluw.Error
 import Text.Zwaluw.Pos
 import Text.Zwaluw.Combinators
 import Text.Zwaluw.HList
 import Text.Zwaluw.TH
 
-instance a ~ b => IsString (Router RouteError [String] a b) where
+data StringsPos = StringsPos 
+    { string    :: Integer 
+    , character :: Integer
+    }
+    deriving (Eq, Ord, Typeable, Data)
+
+instance Show StringsPos where
+    show (StringsPos s c) = "string " ++ show s ++ ", character " ++ show c
+
+instance Position StringsPos where
+    initialPos = StringsPos 0 0
+
+addString :: (Integral i) => i -> StringsPos -> StringsPos
+addString i (StringsPos seg chr) = StringsPos (seg + (fromIntegral i)) 0
+
+addChar :: (Integral i) => i -> StringsPos -> StringsPos
+addChar i (StringsPos seg chr) = StringsPos seg (chr + (fromIntegral i))
+
+instance a ~ b => IsString (PrinterParser (ParseError StringsPos) [String] a b) where
     fromString = lit
 
--- | Routes a constant string.
-lit :: String -> Router RouteError [String] r r
-lit l = Router pf sf 
+-- | a constant string.
+lit :: String -> PrinterParser (ParseError StringsPos) [String] r r
+lit l = PrinterParser pf sf 
     where
       pf = Parser $ \tok pos ->
            case tok of
-             [] -> throwRouteError pos [RouteEOF]
-             ("":_) | (not $ null l) -> throwRouteError pos [RouteEOS]
+             [] -> mkParseError pos [RouteEOF]
+             ("":_) | (not $ null l) -> mkParseError pos [RouteEOS]
              (p:ps) ->
                  case stripPrefix l p of
                    (Just p') -> 
-                       do [Right ((id, p':ps), addX (length l) pos)]
+                       do [Right ((id, p':ps), addChar (length l) pos)]
                    Nothing -> 
-                       throwRouteError pos [UnExpect (show p), Expect (show l)]
+                       mkParseError pos [UnExpect (show p), Expect (show l)]
       sf b = [(( \(s:ss) -> ((l ++ s) : ss)), b)]
 
 
 
 infixr 9 </>
-(</>) :: Router RouteError [String] b c -> Router RouteError [String] a b -> Router RouteError [String] a c
+-- | equivalent to @f . eops . g@
+(</>) :: PrinterParser (ParseError StringsPos) [String] b c -> PrinterParser (ParseError StringsPos) [String] a b -> PrinterParser (ParseError StringsPos) [String] a c
 f </> g = f . eops . g
 
-eops :: Router RouteError [String] r r
-eops = Router 
+-- | end of path segment
+eops :: PrinterParser (ParseError StringsPos) [String] r r
+eops = PrinterParser 
        (Parser $ \path pos -> case path of
-                   []      -> [Right ((id, []), addY 1 pos)]
---                   [] -> throwRouteError pos [RouteEOF]
+                   []      -> [Right ((id, []), addString 1 pos)]
+--                   [] -> mkParseError pos [RouteEOF]
                    ("":ps) -> 
-                          [ Right ((id, ps), addY 1 pos) ]
-                   (p:_) -> throwRouteError pos [Message $ "path-segment not entirely consumed: " ++ p])
+                          [ Right ((id, ps), addString 1 pos) ]
+                   (p:_) -> mkParseError pos [Message $ "path-segment not entirely consumed: " ++ p])
        (\a -> [(("" :), a)])
 
-satisfy :: (Char -> Bool) -> Router RouteError [String] r (Char :- r)
+-- | statisfy a 'Char' predicate
+satisfy :: (Char -> Bool) -> PrinterParser (ParseError StringsPos) [String] r (Char :- r)
 satisfy p = val
   (Parser $ \tok pos -> 
        case tok of
-         []          -> throwRouteError pos [RouteEOF]
-         ("":ss)     -> throwRouteError pos [RouteEOS]
+         []          -> mkParseError pos [RouteEOF]
+         ("":ss)     -> mkParseError pos [RouteEOS]
          ((c:cs):ss)
              | p c -> 
-                 do [Right ((c, cs : ss), addX 1 pos )]
+                 do [Right ((c, cs : ss), addChar 1 pos )]
              | otherwise -> 
-                 do throwRouteError pos [SysUnExpect [c]]
+                 do mkParseError pos [SysUnExpect [c]]
   )
   (\c -> [ \paths -> case paths of [] -> [[c]] ; (s:ss) -> ((c:s):ss) | p c ])
 
 
--- check that the remainder of the 'String' in this segment satisfies a prefix
-satisfyStr :: (String -> Bool) -> Router RouteError [String] r (String :- r)
+-- | satisfy a 'String' predicate. 
+--
+-- Note: must match the entire remainder of the 'String' in this segment
+satisfyStr :: (String -> Bool) -> PrinterParser (ParseError StringsPos) [String] r (String :- r)
 satisfyStr p = val
   (Parser $ \tok pos -> 
        case tok of
-         []          -> throwRouteError pos [RouteEOF]
-         ("":ss)     -> throwRouteError pos [RouteEOS]
+         []          -> mkParseError pos [RouteEOF]
+         ("":ss)     -> mkParseError pos [RouteEOS]
          (s:ss)
              | p s -> 
-                 do [Right ((s, "":ss), addY 1 pos )]
+                 do [Right ((s, "":ss), addString 1 pos )]
              | otherwise -> 
-                 do throwRouteError pos [SysUnExpect s]
+                 do mkParseError pos [SysUnExpect s]
   )
   (\str -> [ \paths -> case paths of [] -> [str] ; (s:ss) -> ((str++s):ss) | p str ])
 
 
-digit :: Router RouteError [String] r (Char :- r)
+-- | ascii digits @\'0\'..\'9\'@
+digit :: PrinterParser (ParseError StringsPos) [String] r (Char :- r)
 digit = satisfy isDigit <?> "a digit 0-9"
 
--- | matches alphabetic Unicode characters (lower-case, upper-case and title-case letters, plus letters of caseless scripts and modifiers letters).  (Uses 'isAlpha')
-alpha :: Router RouteError [String] r (Char :- r)
+-- | matches alphabetic Unicode characters (lower-case, upper-case and title-case letters, 
+-- plus letters of caseless scripts and modifiers letters).  (Uses 'isAlpha')
+alpha :: PrinterParser (ParseError StringsPos) [String] r (Char :- r)
 alpha = satisfy isAlpha <?> "an alphabetic Unicode character"
 
-anyChar :: Router RouteError [String] r (Char :- r)
+-- | matches white-space characters in the Latin-1 range. (Uses 'isSpace')
+space :: PrinterParser (ParseError StringsPos) [String] r (Char :- r)
+space = satisfy isSpace <?> "a white-space character"
+
+-- | any character
+anyChar :: PrinterParser (ParseError StringsPos) [String] r (Char :- r)
 anyChar = satisfy (const True)
 
-char :: Char -> Router RouteError [String] r (Char :- r)
+-- | matches the specified character
+char :: Char -> PrinterParser (ParseError StringsPos) [String] r (Char :- r)
 char c = satisfy (== c) <?> show [c]
 
-int :: Router RouteError [String] r (Int :- r)
+-- | matches an 'Int'
+int :: PrinterParser (ParseError StringsPos) [String] r (Int :- r)
 int = xmaph read (Just . show) (opt (rCons . char '-') . (rList1 digit))
 
--- | Routes any string.
--- FIXME: not sure the ss function is really doing the right thing
-anyString :: Router RouteError [String] r (String :- r)
+-- | matches an 'Integer'
+integer :: PrinterParser (ParseError StringsPos) [String] r (Integer :- r)
+integer = xmaph read (Just . show) (opt (rCons . char '-') . (rList1 digit))
+
+-- | matches any 'String'
+anyString :: PrinterParser (ParseError StringsPos) [String] r (String :- r)
 anyString = val ps ss 
     where
       ps = Parser $ \tok pos ->
            case tok of
-             []     -> throwRouteError pos [RouteEOF]
-             ("":_) -> throwRouteError pos [RouteEOS]
-             (s:ss) -> [Right ((s, ss), addY 1 pos)]
+             []     -> mkParseError pos [RouteEOF]
+             ("":_) -> mkParseError pos [RouteEOS]
+             (s:ss) -> [Right ((s, ss), addString 1 pos)]
       ss str = [\ss -> str : ss]
 
--- | @r \`printAs\` s@ uses ther serializer of @r@ to test if serializing succeeds,
---   and if it does, instead serializes as @s@. 
-printAs :: Router e [String] a b -> String -> Router e [String] a b
-printAs r s = r { ser = map (first (const (s :))) . take 1 . ser r }
-
+-- | Predicate to test if we have parsed all the strings.
+-- Typically used as argument to 'parse1'
 isComplete :: [String] -> Bool
 isComplete []   = True
 isComplete [""] = True
 isComplete _    = False
-
-      
-
-        

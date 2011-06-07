@@ -1,12 +1,7 @@
 {-# LANGUAGE TemplateHaskell, TypeOperators, ScopedTypeVariables #-}
 import Data.Monoid
-import Web.Routes
+import Web.Routes hiding (showParseError)
 import Web.Routes.Zwaluw
-import Text.Zwaluw.Core
-import Text.Zwaluw.Combinators
-import Text.Zwaluw.Error
-import Text.Zwaluw.HList
-import Text.Zwaluw.Strings
 import Text.Zwaluw.TH
 import Prelude hiding (id, (.), (/))
 import Control.Category
@@ -15,8 +10,6 @@ import Web.Routes.Happstack
 
 -- The router. Specifies how to parse a URL into a Sitemap and back.
 
-type Route url = Router RouteError [String] () (url :- ())
-
 data Sitemap
    = Home
    | UserOverview
@@ -24,9 +17,9 @@ data Sitemap
    | Article Int String
    deriving (Eq, Show)
 
-$(deriveRouters ''Sitemap)
+$(derivePrinterParsers ''Sitemap)
 
-sitemap :: Route Sitemap
+sitemap :: Router Sitemap
 sitemap =
     (  rHome
     <> lit "users" . users
@@ -49,11 +42,11 @@ showurl url =
     let (ps, params) = formatPathSegments site url
     in putStrLn (encodePathInfo ps params)
 
--- testParse :: [String] -> IO ()
+testParse :: [String] -> IO ()
 testParse paths = 
     case parse1 isComplete sitemap paths of
       (Left e) -> do print e
-                     putStrLn (showRouteError $ condenseErrors e)
+                     putStrLn (show $ condenseErrors e)
       (Right a) -> print a
 
 test :: String -> IO ()

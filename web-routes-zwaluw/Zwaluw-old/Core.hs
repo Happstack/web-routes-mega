@@ -2,10 +2,10 @@
 module Web.Routes.Zwaluw.Core 
 {-
     ( -- * Types
-    RouteError(..), Router(..), (:-)(..), (.~)
+    RouteError(..), PrinterParser(..), (:-)(..), (.~)
     -- * Running routers
     , parse, unparse
-    -- * Constructing / Manipulating Routers
+    -- * Constructing / Manipulating PrinterParsers
     , duck, eor, lit, printAs, pure, routeError, val, xmap
     -- heterogeneous list functions
     , hhead, htail, hdMap, hdTraverse, pop, arg, xmaph
@@ -48,38 +48,38 @@ bind (Right l) f =
       (errs,[]) -> Left (last errs)
       (_, succ) -> Right (concat succ)
 
--- | A @Router a b@ takes an @a@ to parse a URL and results in @b@ if parsing succeeds.
+-- | A @PrinterParser a b@ takes an @a@ to parse a URL and results in @b@ if parsing succeeds.
 --   And it takes a @b@ to serialize to a URL and results in @a@ if serializing succeeds.
-data Router e a b = Router
+data PrinterParser e a b = PrinterParser
   { prs :: [String] -> Either e [(a -> b, [String])]
   , ser :: b -> Either e [([String] -> [String], a)]
   }
 
-mapRouteError :: (e -> e') -> Router e a b -> Router e' a b
-mapRouteError f (Router pf sf) =
-    Router (\a -> either (Left . f) (Right . id) (pf a))
+mapRouteError :: (e -> e') -> PrinterParser e a b -> PrinterParser e' a b
+mapRouteError f (PrinterParser pf sf) =
+    PrinterParser (\a -> either (Left . f) (Right . id) (pf a))
            (\b -> either (Left . f) (Right . id) (sf b))
 
-instance Category (Router e) where
-  id = Router
+instance Category (PrinterParser e) where
+  id = PrinterParser
     (\x -> return [(id, x)])
     (\x -> return [(id, x)])
 
-  ~(Router pf sf) . ~(Router pg sg) = Router 
+  ~(PrinterParser pf sf) . ~(PrinterParser pg sg) = PrinterParser 
     (compose (.) pf pg)
     (compose (.) sf sg) 
 
 -- | Reverse composition, but with the side effects still in left-to-right order.
-(.~) :: Router e a b -> Router e b c -> Router e a c
-~(Router pf sf) .~ ~(Router pg sg) = Router 
+(.~) :: PrinterParser e a b -> PrinterParser e b c -> PrinterParser e a c
+~(PrinterParser pf sf) .~ ~(PrinterParser pg sg) = PrinterParser 
   (compose (flip (.)) pf pg)
   (compose (flip (.)) sg sf)
 
-instance (Error e) => Monoid (Router e a b) where
-  mempty = Router 
+instance (Error e) => Monoid (PrinterParser e a b) where
+  mempty = PrinterParser 
     (const mzero)
     (const mzero)
-  ~(Router pf sf) `mappend` ~(Router pg sg) = Router 
+  ~(PrinterParser pf sf) `mappend` ~(PrinterParser pg sg) = PrinterParser 
     (\s -> pf s `plus` pg s)
     (\s -> sf s `plus` sg s)
 
@@ -103,12 +103,12 @@ instance Error RouteError where
 routeError :: e -> Either e b
 routeError e = Left e
 
-instance a ~ b => IsString (Router RouteError a b) where
+instance a ~ b => IsString (PrinterParser RouteError a b) where
   fromString = lit
 
 -- | Routes a constant string.
-lit :: String -> Router RouteError r r
-lit l = Router pf sf 
+lit :: String -> PrinterParser RouteError r r
+lit l = PrinterParser pf sf 
     where
       pf (p:ps) =
           case stripPrefix l p of
@@ -117,8 +117,8 @@ lit l = Router pf sf
       pf [] = routeError RouteEOF
       sf b = return [(( \(s:ss) -> ((l ++ s) : ss)), b)]
 {-
-eor :: Router RouteError r r
-eor = Router
+eor :: PrinterParser RouteError r r
+eor = PrinterParser
       (\path ->
            case path of
              []   -> return (id, [])
@@ -127,8 +127,8 @@ eor = Router
       (\a -> return (id, a))
 -}
 
-eops :: (Error e) => Router e r r
-eops = Router 
+eops :: (Error e) => PrinterParser e r r
+eops = PrinterParser 
        (\path -> case path of
                    []      -> return   [(id, [])]
                    ("":ps) -> return [(id, ps)]
@@ -137,14 +137,14 @@ eops = Router
        
 
 -- | Map over routers.
-xmap :: (a -> b) -> (b -> Either e a) -> Router e r a -> Router e r b
-xmap f g (Router p s) = Router p' s'
+xmap :: (a -> b) -> (b -> Either e a) -> PrinterParser e r a -> PrinterParser e r b
+xmap f g (PrinterParser p s) = PrinterParser p' s'
     where
       p' = (fmap . fmap . map . first . fmap) f p
       s' url = s =<< (g url)
 
 -- | Lift a constructor-destructor pair to a pure router.
-xpure :: (a -> b) -> (b -> Either e a) -> Router e a b
+xpure :: (a -> b) -> (b -> Either e a) -> PrinterParser e a b
 xpure f g = xmap f g id
 
 -- | A stack datatype. Just a better looking tuple.
@@ -174,30 +174,30 @@ hdMap :: (a1 -> a2) -> (a1 :- b) -> (a2 :- b)
 hdMap = arg (:-)
 
 -- | Like "xmap", but only maps over the top of the stack.
-xmaph :: (a -> b) -> (b -> Either e a) -> Router e i (a :- o) -> Router e i (b :- o)
+xmaph :: (a -> b) -> (b -> Either e a) -> PrinterParser e i (a :- o) -> PrinterParser e i (b :- o)
 xmaph f g = xmap (hdMap f) (hdTraverse g)
 
 -- | Build a router for a value given all the ways to parse and serialize it.
-val :: ([String] ->  Either e [(a, [String])]) -> (a -> Either e [[String] -> [String]]) -> Router e r (a :- r)
-val rs ss = Router
+val :: ([String] ->  Either e [(a, [String])]) -> (a -> Either e [[String] -> [String]]) -> PrinterParser e r (a :- r)
+val rs ss = PrinterParser
     (fmap (map (first (:-))) . rs)
     (\(a :- r) -> fmap (map (\f -> (f, r))) (ss a))
 
 -- | Convert a router to do what it does on the tail of the stack.
-duck :: Router e r1 r2 -> Router e (h :- r1) (h :- r2)
-duck r = Router
+duck :: PrinterParser e r1 r2 -> PrinterParser e (h :- r1) (h :- r2)
+duck r = PrinterParser
   (fmap (map (first (\f (h :- t) -> h :- f t))) . prs r)
   (\(h :- t) -> fmap (map (second (h :-))) $ ser r t)
 
 -- | Convert a router to do what it does on the tail of the stack.
-duck1 :: Router e r1 (a :- r2) -> Router e (h :- r1) (a :- h :- r2)
-duck1 r = Router
+duck1 :: PrinterParser e r1 (a :- r2) -> PrinterParser e (h :- r1) (a :- h :- r2)
+duck1 r = PrinterParser
   (fmap (map (first (\f (h :- t) -> let a :- t' = f t in a :- h :- t'))) . prs r)
   (\(a :- h :- t) -> fmap (map (second (h :-))) $ ser r (a :- t))
 {-
 -- | @r \`printAs\` s@ uses the serializer of @r@ to test if serializing succeeds,
 --   and if it does, instead serializes as @s@. 
-printAs :: Router e a b -> [String] -> Router e a b
+printAs :: PrinterParser e a b -> [String] -> PrinterParser e a b
 printAs r s = r { ser = ser' }
     where
       ser' url =
@@ -208,7 +208,7 @@ printAs r s = r { ser = ser' }
             
 
 -- | Give all possible parses.
-parse :: Router e () a -> [String] -> Either e [a]
+parse :: PrinterParser e () a -> [String] -> Either e [a]
 parse p s = 
     case prs p s of
       (Left errs)     -> Left errs
@@ -218,8 +218,8 @@ parse p s =
       empty [[]] = True
       empty _ = False
 
--- | Give the first parse, for Routers with a parser that yields just one value.
-parse1 :: (Error e) => Router e () (a :- ()) -> [String] -> Either e a
+-- | Give the first parse, for PrinterParsers with a parser that yields just one value.
+parse1 :: (Error e) => PrinterParser e () (a :- ()) -> [String] -> Either e a
 parse1 p s = 
     case parse p s of 
       (Left e) -> (Left e)
@@ -229,11 +229,11 @@ parse1 p s =
             (a:_) -> Right a
                       
 -- | Give all possible serializations.
-unparse :: Router e () url -> url -> Either e [[String]]
+unparse :: PrinterParser e () url -> url -> Either e [[String]]
 unparse p = fmap (map (($ [[]]) . fst)) . ser p
 
--- | Give the first serialization, for Routers with a serializer that needs just one value.
-unparse1 :: (Error e) => Router e () (a :- ()) -> a -> Either e [String]
+-- | Give the first serialization, for PrinterParsers with a serializer that needs just one value.
+unparse1 :: (Error e) => PrinterParser e () (a :- ()) -> a -> Either e [String]
 unparse1 p a = 
     case unparse p (a :- ()) of
       (Left e)   -> Left e

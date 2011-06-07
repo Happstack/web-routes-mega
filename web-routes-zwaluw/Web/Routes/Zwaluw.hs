@@ -1,23 +1,29 @@
 {-# LANGUAGE TypeOperators #-}
-module Web.Routes.Zwaluw where
+module Web.Routes.Zwaluw 
+    ( module Text.Zwaluw
+    , module Text.Zwaluw.Strings
+    , Router
+    , toSite
+    ) where
 
 import Web.Routes (Site(..))
-import Text.Zwaluw.Core
-import Text.Zwaluw.Error
-import Text.Zwaluw.HList
+import Text.Zwaluw
 import Text.Zwaluw.Strings
 
+type Router url = PrinterParser (ParseError StringsPos) [String] () (url :- ())
+
 toSite :: ((url -> [(String, String)] -> String) -> url -> a) 
-       -> Router RouteError [String] () (url :- ()) 
+       -> Router url -- PrinterParser (ParseError StringsPos) [String] () (url :- ()) 
        -> Site url a
-toSite handler r@(Router pf sf) =
+toSite handler r@(PrinterParser pf sf) =
     Site { handleSite = handler
          , formatPathSegments =  \url ->
              case unparse1 [] r url of
                Nothing -> error "formatPathSegments failed to produce a url"
                (Just ps) -> (ps, [])
-         , parsePathSegments = mapLeft (showRouteError . condenseErrors) . (parse1 isComplete r)
+         , parsePathSegments = mapLeft (showParseError showPos . condenseErrors) . (parse1 isComplete r)
          }
     where
       mapLeft f = either (Left . f) Right
+      showPos (StringsPos s c) = "segment " ++ show (s + 1) ++ ", character " ++ show c
 

@@ -1,15 +1,14 @@
 {-# LANGUAGE DeriveFunctor, DeriveDataTypeable, FlexibleContexts, FlexibleInstances, GeneralizedNewtypeDeriving, ScopedTypeVariables, TypeFamilies, TypeSynonymInstances, MultiParamTypeClasses, TypeOperators #-}
-module Text.Zwaluw.Core 
-{-
+module Text.Zwaluw.Prim
     ( -- * Types
-    RouteError(..), Router(..), (:-)(..), (.~)
+    Parser(..), PrinterParser(..), (.~)
     -- * Running routers
-    , parse, unparse
-    -- * Constructing / Manipulating Routers
-    , duck, eor, lit, printAs, pure, routeError, val, xmap
+    , parse, parse1, unparse, unparse1, bestErrors
+    -- * Constructing / Manipulating PrinterParsers
+    , xpure, val, xmap
     -- heterogeneous list functions
-    , hhead, htail, hdMap, hdTraverse, pop, arg, xmaph
-    ) -} where
+    , xmaph
+    ) where
 
 import Prelude          hiding ((.), id, (/))
 import Control.Applicative (Applicative(..))
@@ -51,6 +50,9 @@ maximumsBy cmp (x:xs)        =  foldl maxBy [x] xs
                                        EQ -> (y:xs)
                                        LT  -> [y]
 
+-- |Yet another parser. 
+--
+-- Returns all possible parses and parse errors
 newtype Parser e tok a = Parser { runParser :: tok -> Pos e -> [Either e ((a, tok), Pos e)] }
 
 instance Functor (Parser e tok) where
@@ -84,88 +86,90 @@ composeP op mf mg =
     do f <- mf
        g <- mg
        return (f `op` g)
--- | A @Router a b@ takes an @a@ to parse a URL and results in @b@ if parsing succeeds.
+
+-- | Attempt to extract the most relevant errors from a list of parse errors.
+-- 
+-- The current heuristic is to find error (or errors) where the error position is highest.
+bestErrors :: (ErrorPosition e, Ord (Pos e)) => [e] -> [e]
+bestErrors [] = []
+bestErrors errs = maximumsBy (compare `on` getPosition) errs
+
+-- | A @PrinterParser a b@ takes an @a@ to parse a URL and results in @b@ if parsing succeeds.
 --   And it takes a @b@ to serialize to a URL and results in @a@ if serializing succeeds.
-data Router e tok a b = Router
+data PrinterParser e tok a b = PrinterParser
   { prs :: Parser e tok (a -> b)
   , ser :: b -> [(tok -> tok, a)]
   }
 
-instance Category (Router e tok) where
-  id = Router
+instance Category (PrinterParser e tok) where
+  id = PrinterParser
     (return id)
     (\x -> [(id, x)])
 
-  ~(Router pf sf) . ~(Router pg sg) = Router 
+  ~(PrinterParser pf sf) . ~(PrinterParser pg sg) = PrinterParser 
     (composeP (.) pf pg)
     (compose (.) sf sg) 
 
-
-infixr 9 .~
--- | Reverse composition, but with the side effects still in left-to-right order.
-(.~) :: Router e tok a b -> Router e tok b c -> Router e tok a c
-~(Router pf sf) .~ ~(Router pg sg) = Router 
-  (composeP (flip (.)) pf pg)
-  (compose (flip (.)) sg sf)
-
-instance Monoid (Router e tok a b) where
-  mempty = Router 
+instance Monoid (PrinterParser e tok a b) where
+  mempty = PrinterParser 
     mzero
     (const mzero)
 
-  ~(Router pf sf) `mappend` ~(Router pg sg) = Router 
+  ~(PrinterParser pf sf) `mappend` ~(PrinterParser pg sg) = PrinterParser 
     (pf `mplus` pg)
     (\s -> sf s `mplus` sg s)
 
+infixr 9 .~
+-- | Reverse composition, but with the side effects still in left-to-right order.
+(.~) :: PrinterParser e tok a b -> PrinterParser e tok b c -> PrinterParser e tok a c
+~(PrinterParser pf sf) .~ ~(PrinterParser pg sg) = PrinterParser 
+  (composeP (flip (.)) pf pg)
+  (compose (flip (.)) sg sf)
+
 -- | Map over routers.
-xmap :: (a -> b) -> (b -> Maybe a) -> Router e tok r a -> Router e tok r b
-xmap f g (Router p s) = Router p' s'
+xmap :: (a -> b) -> (b -> Maybe a) -> PrinterParser e tok r a -> PrinterParser e tok r b
+xmap f g (PrinterParser p s) = PrinterParser p' s'
     where
       p' = fmap (fmap f) p
       s' url = maybe mzero s (g url)
 
 -- | Lift a constructor-destructor pair to a pure router.
-xpure :: (a -> b) -> (b -> Maybe a) -> Router e tok a b
+xpure :: (a -> b) -> (b -> Maybe a) -> PrinterParser e tok a b
 xpure f g = xmap f g id
 
 -- | Like "xmap", but only maps over the top of the stack.
-xmaph :: (a -> b) -> (b -> Maybe a) -> Router e tok i (a :- o) -> Router e tok i (b :- o)
+xmaph :: (a -> b) -> (b -> Maybe a) -> PrinterParser e tok i (a :- o) -> PrinterParser e tok i (b :- o)
 xmaph f g = xmap (hdMap f) (hdTraverse g)
 
-val :: forall e tok a r. Parser e tok a -> (a -> [tok -> tok]) -> Router e tok r (a :- r)
-val rs ss = Router rs' ss'
+-- | lift a 'Parser' and a printer into a 'PrinterParser'
+val :: forall e tok a r. Parser e tok a -> (a -> [tok -> tok]) -> PrinterParser e tok r (a :- r)
+val rs ss = PrinterParser rs' ss'
     where
       rs' :: Parser e tok (r -> (a :- r))
       rs' = fmap (:-) rs
       ss' =  (\(a :- r) -> map (\f -> (f, r)) (ss a))
 
 -- | Give all possible parses or errors.
-parse :: (Position (Pos e)) => Router e tok () a -> tok -> [Either e (a, tok)]
+parse :: (Position (Pos e)) => PrinterParser e tok () a -> tok -> [Either e (a, tok)]
 parse p s = 
     map (either Left (\((f, tok), _) -> Right (f (), tok))) $ runParser (prs p) s initialPos
 
-bestErrors :: (ErrorPosition e, Ord (Pos e)) => [e] -> [e]
-bestErrors [] = []
-bestErrors errs = maximumsBy (compare `on` getPosition) errs
-
--- | Give the first parse, for Routers with a parser that yields just one value. 
+-- | Give the first parse, for PrinterParsers with a parser that yields just one value. 
 -- Otherwise return the error (or errors) with the highest error position.
 parse1 :: (ErrorPosition e, Position (Pos e), Show e, Ord (Pos e)) =>
-     (tok -> Bool) -> Router e tok () (a :- ()) -> tok -> Either [e] a
+     (tok -> Bool) -> PrinterParser e tok () (a :- ()) -> tok -> Either [e] a
 parse1 isComplete r paths = 
     let results = parse r paths
     in case [ a | (Right (a,tok)) <- results, isComplete tok ] of
          ((u :- ()):_) -> Right u
          _             -> Left $ bestErrors [ e | Left e <- results ]
 
-
 -- | Give all possible serializations.
-unparse :: tok -> Router e tok () url -> url -> [tok]
+unparse :: tok -> PrinterParser e tok () url -> url -> [tok]
 unparse tok p = (map (($ tok) . fst)) . ser p
 
-
--- | Give the first serialization, for Routers with a serializer that needs just one value.
-unparse1 :: (Error e) => tok -> Router e tok () (a :- ()) -> a -> Maybe tok
+-- | Give the first serialization, for PrinterParsers with a serializer that needs just one value.
+unparse1 :: (Error e) => tok -> PrinterParser e tok () (a :- ()) -> a -> Maybe tok
 unparse1 tok p a = 
     case unparse tok p (a :- ()) of
       [] -> Nothing

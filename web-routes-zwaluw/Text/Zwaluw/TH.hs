@@ -1,29 +1,29 @@
 {-# LANGUAGE TemplateHaskell, TypeOperators #-}
-module Text.Zwaluw.TH (deriveRouters) where
+module Text.Zwaluw.TH (derivePrinterParsers) where
 
 import Control.Monad.Error (Error(strMsg))
-import Control.Monad             (liftM, replicateM)
+import Control.Monad       (liftM, replicateM)
 import Language.Haskell.TH
-import Text.Zwaluw.Core --   ((:-)((:-)), arg, xpure)
+import Text.Zwaluw.Prim
 import Text.Zwaluw.HList
 
 -- | Derive routers for all constructors in a datatype. For example: 
 --
---   @$(deriveRouters \'\'Sitemap)@
-deriveRouters :: Name -> Q [Dec]
-deriveRouters name = do
+--   @$(derivePrinterParsers \'\'Sitemap)@
+derivePrinterParsers :: Name -> Q [Dec]
+derivePrinterParsers name = do
   info <- reify name
   case info of
     TyConI (DataD _ _ _ cons _)   ->
-      concat `liftM` mapM deriveRouter cons
+      concat `liftM` mapM derivePrinterParser cons
     TyConI (NewtypeD _ _ _ con _) ->
-      deriveRouter con
+      derivePrinterParser con
     _ ->
       fail $ show name ++ " is not a datatype."
 
 -- Derive a router for a single constructor.
-deriveRouter :: Con -> Q [Dec]
-deriveRouter con =
+derivePrinterParser :: Con -> Q [Dec]
+derivePrinterParser con =
   case con of
     NormalC name tys -> go name (map snd tys)
     RecC name tys -> go name (map (\(_,_,ty) -> ty) tys)
@@ -32,7 +32,7 @@ deriveRouter con =
       return []
   where
     go name tys = do
-      let name' = mkRouterName name
+      let name' = mkPrinterParserName name
       runIO $ putStrLn $ "Introducing router " ++ nameBase name' ++ "."
       expr <- [| xpure $(deriveConstructor name (length tys))
                      $(deriveDestructor name tys) |]
@@ -78,8 +78,8 @@ deriveDestructor name tys = do
 
 
 -- Derive the name of a router based on the name of the constructor in question.
-mkRouterName :: Name -> Name
-mkRouterName name = mkName ('r' : nameBase name)
+mkPrinterParserName :: Name -> Name
+mkPrinterParserName name = mkName ('r' : nameBase name)
 
 
 -- Retrieve the name of a constructor.

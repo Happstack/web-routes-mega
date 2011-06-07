@@ -51,8 +51,8 @@ instance Monad (Parser tok a) where
   -}  
 {-
 -- | Build a router for a value given all the ways to parse and serialize it.
-val :: (tok ->  Either e [(a, tok)]) -> (a -> [tok -> tok]) -> Router e tok r (a :- r)
-val rs ss = Router
+val :: (tok ->  Either e [(a, tok)]) -> (a -> [tok -> tok]) -> PrinterParser e tok r (a :- r)
+val rs ss = PrinterParser
     (liftEitherP (fmap (map (first (:-))) . rs))
     (\(a :- r) -> (map (\f -> (f, r))) (ss a))
 -}
@@ -70,7 +70,7 @@ liftEitherP e = Parser $ \tok -> liftEither (e tok)
 -}
 
 {-
-data Router tok a b = Router
+data PrinterParser tok a b = PrinterParser
   { prs :: tok -> Either RouteError [(a -> b, tok)]
   , ser :: b -> Either RouteError [(tok -> tok, a)]
   }
@@ -83,17 +83,17 @@ routeError e = Left (RouteError Nothing e)
 
 
 {-
-mapRouteError :: (e -> e') -> Router e a b -> Router e' a b
-mapRouteError f (Router pf sf) =
-    Router (\a -> either (Left . f) (Right . id) (pf a))
+mapRouteError :: (e -> e') -> PrinterParser e a b -> PrinterParser e' a b
+mapRouteError f (PrinterParser pf sf) =
+    PrinterParser (\a -> either (Left . f) (Right . id) (pf a))
            (\b -> either (Left . f) (Right . id) (sf b))
 
-instance Category (Router tok) where
-  id = Router
+instance Category (PrinterParser tok) where
+  id = PrinterParser
     (\x -> return [(id, x)])
     (\x -> return [(id, x)])
 
-  ~(Router pf sf) . ~(Router pg sg) = Router 
+  ~(PrinterParser pf sf) . ~(PrinterParser pg sg) = PrinterParser 
     (compose (.) pf pg)
     (compose (.) sf sg) 
 -} 
@@ -193,7 +193,7 @@ composeE op mf mg = \s ->
 -}
 
 {-
-parse :: (Position (Pos e)) => Router e tok () a -> tok -> Either [e] [(a, tok)]
+parse :: (Position (Pos e)) => PrinterParser e tok () a -> tok -> Either [e] [(a, tok)]
 parse p s = 
     case partitionEithers $ runParser (prs p) s initialPos of
       ([], [])   -> Right []
@@ -205,7 +205,7 @@ parse p s =
 --      (Right fs) -> Right [ (f (), tok) | (f, tok) <- fs ]
 {-
 
-parse1 :: (Error e, Position (Pos e)) => Router e tok () (a :- ()) -> tok -> Either [e] a
+parse1 :: (Error e, Position (Pos e)) => PrinterParser e tok () (a :- ()) -> tok -> Either [e] a
 parse1 p s = 
     case parse p s of 
       (Left e) -> (Left e)
@@ -218,7 +218,7 @@ parse1 p s =
 {-
 -- | @r \`printAs\` s@ uses ther serializer of @r@ to test if serializing succeeds,
 --   and if it does, instead serializes as @s@. 
-printAs :: Router a b -> String -> Router a b
+printAs :: PrinterParser a b -> String -> PrinterParser a b
 printAs r s = r { ser = map (first (const (s ++))) . take 1 . ser r }
 
 readEither :: (Read a) => [String] -> StateT ErrorPos (Either RouteError) [(a, [String])]
@@ -232,7 +232,7 @@ readEither (p:ps) =
 
 
 -- | Routes any value that has a Show and Read instance.
-readshow :: (Show a, Read a) => Router [String] r (a :- r)
+readshow :: (Show a, Read a) => PrinterParser [String] r (a :- r)
 readshow = val readEither showEither
 
 
@@ -240,11 +240,11 @@ showEither :: (Show a) => a -> Either e [[String] -> [String]]
 showEither a = Right [\(s:ss) -> (shows a s) : ss ]
 
 -- | Routes any integer.
-int :: Router [String] r (Int :- r)
+int :: PrinterParser [String] r (Int :- r)
 int = readshow
 
 -- | Routes any string.
-string :: Router [String] r (String :- r)
+string :: PrinterParser [String] r (String :- r)
 string = val ps ss 
     where
       ps [] = routeError RouteEOF
@@ -252,7 +252,7 @@ string = val ps ss
       ss str = return [\(s:ss) -> (str ++ s) : ss]
 
 -- | Routes one string satisfying the given predicate.
-satisfy :: (String -> Bool) -> Router [String] r (String :- r)
+satisfy :: (String -> Bool) -> PrinterParser [String] r (String :- r)
 satisfy p = val ps ss
     where
       ps []    = routeError RouteEOF
@@ -263,11 +263,11 @@ satisfy p = val ps ss
              then return [([s] ++)]
              else Left (strMsg $ "predicate failed on " ++ s)
 infixr 9 </>
-(</>) :: Router [String] b c -> Router [String] a b -> Router [String] a c
+(</>) :: PrinterParser [String] b c -> PrinterParser [String] a b -> PrinterParser [String] a c
 f </> g = f . eops . g
 
-eops :: Router [String] r r
-eops = Router 
+eops :: PrinterParser [String] r r
+eops = PrinterParser 
        (\path -> case path of
                    []      -> return   [(id, [])]
                    ("":ps) -> return [(id, ps)]

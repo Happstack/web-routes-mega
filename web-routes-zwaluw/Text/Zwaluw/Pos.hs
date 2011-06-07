@@ -11,18 +11,21 @@ class ErrorPosition e where
 class Position a where
     initialPos :: a
 
-data XYPos = XYPos Integer Integer
-      deriving (Eq, Ord, Read, Show, Typeable, Data)
+data MajorMinorPos = MajorMinorPos 
+    { major :: Integer 
+    , minor :: Integer
+    }
+    deriving (Eq, Ord, Read, Show, Typeable, Data)
 
 -- should this really be tied to the error type that uses it ?
 -- if so, that affects addY
-instance Position XYPos where
-    initialPos = XYPos 1 1
+instance Position MajorMinorPos where
+    initialPos = MajorMinorPos 0 0
 
-addX :: (Integral i) => i -> XYPos -> XYPos
-addX i (XYPos x y) = XYPos (x + (fromIntegral i)) y
+addMajor :: (Integral i) => i -> MajorMinorPos -> MajorMinorPos
+addMajor i (MajorMinorPos maj min) = MajorMinorPos (maj + (fromIntegral i)) 0
 
-addY :: (Integral i) => i -> XYPos -> XYPos
-addY i (XYPos x y) = XYPos 1 (y + (fromIntegral i))
+addMinor :: (Integral i) => i -> MajorMinorPos -> MajorMinorPos
+addMinor i (MajorMinorPos maj min) = MajorMinorPos maj (min + (fromIntegral i))
 
 
