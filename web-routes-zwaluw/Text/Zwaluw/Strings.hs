@@ -35,9 +35,11 @@ instance Show StringsPos where
 instance InitialPosition StringsPos where
     initialPos = StringsPos 0 0
 
+-- | increment the string position by 'i' and reset the character position to 0
 addString :: (Integral i) => i -> StringsPos -> StringsPos
 addString i (StringsPos seg chr) = StringsPos (seg + (fromIntegral i)) 0
 
+-- | increment the character position by 'i'
 addChar :: (Integral i) => i -> StringsPos -> StringsPos
 addChar i (StringsPos seg chr) = StringsPos seg (chr + (fromIntegral i))
 

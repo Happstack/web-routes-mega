@@ -1,14 +1,14 @@
-{-# LANGUAGE TemplateHaskell, TypeOperators, ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell, TypeOperators, ScopedTypeVariables, OverloadedStrings #-}
 module Main where
 
-import Prelude hiding (id, (.), (/))
+import Prelude hiding (id, (.))
 import Control.Category
 import Control.Monad.Trans
 import Text.Zwaluw.TH
 import Web.Routes
 import Web.Routes.Zwaluw
 
--- | The routes
+-- | the routes
 data Sitemap
    = Home
    | UserOverview
@@ -23,11 +23,11 @@ $(derivePrinterParsers ''Sitemap)
 sitemap :: Router Sitemap
 sitemap =
     (  rHome
-    <> lit "users" . users
-    <> rArticle . (lit "article" </> int . lit "-" . anyString)
+    <> "users" . users
+    <> rArticle . ("article" </> int . "-" . anyString)
     )
   where
-    users  =  lit "/" . rUserOverview
+    users  =  "/" . rUserOverview
            <> rUserDetail </> int
 
 -- | Convert the 'Sitemap' into a 'Site' that can be used with web-routes
@@ -36,31 +36,36 @@ site = toSite web' sitemap
     where
       web'= \f u -> unRouteT (web u) f
 
--- | this is the  function 
+-- | this function handles routing the parsed url to a handler
 web :: Sitemap -> RouteT Sitemap IO ()
 web url =
-    do liftIO $ print url
-       s <- showURL url
-       liftIO $ putStrLn s
+    case url of
+      _ -> do liftIO $ print url
+              s <- showURL url
+              liftIO $ putStrLn s
 
-showurl :: Sitemap -> IO ()
+-- | a little function to test rendering a url
+showurl :: Sitemap -> String
 showurl url = 
     let (ps, params) = formatPathSegments site url
-    in putStrLn (encodePathInfo ps params)
+    in (encodePathInfo ps params)
 
-testParse :: [String] -> IO ()
+-- | a little function to test parsing a url
+testParse :: [String] -> Either String Sitemap
 testParse paths = 
     case parse1 isComplete sitemap paths of
-      (Left e) -> do print e
-                     putStrLn (show $ condenseErrors e)
-      (Right a) -> print a
+      (Left e)  -> Left (show $ condenseErrors e)
+      (Right a) -> Right a
 
-test :: String -> IO ()
+-- | run the site using the supplied url string
+test :: String -- ^ incoming url
+     -> IO ()
 test path = 
     case runSite "" site path of
       (Left e)   -> putStrLn e
       (Right io) -> io
 
+-- | interactively call 'test'
 main :: IO ()
 main = mapM_ test =<< fmap lines getContents
         
