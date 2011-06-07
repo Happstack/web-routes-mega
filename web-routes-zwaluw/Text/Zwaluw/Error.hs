@@ -10,19 +10,17 @@ import Text.Zwaluw.Pos
 
 data ErrorMsg
     = SysUnExpect String
+    | EOI String
     | UnExpect String
     | Expect String
     | Message String
-    | RouteEOF
-    | RouteEOS
       deriving (Eq, Ord, Read, Show, Typeable, Data)
 
 messageString :: ErrorMsg -> String
 messageString (Expect s)         = s
 messageString (UnExpect s)       = s
 messageString (SysUnExpect s)    = s
-messageString RouteEOF           = "end of input"
-messageString RouteEOS           = "end of segment"
+messageString (EOI s)            = s
 messageString (Message s)        = s
 
 data ParserError pos = ParserError (Maybe pos) [ErrorMsg]
@@ -71,13 +69,16 @@ showErrorMessages msgOr msgUnknown msgExpecting msgUnExpected msgEndOfInput msgs
       isSysUnExpect (SysUnExpect {}) = True
       isSysUnExpect _                = False
 
+      isEOI (EOI {})                 = True
+      isEOI _                        = False
+
       isUnExpect (UnExpect {})       = True
       isUnExpect _                   = False
 
       isExpect (Expect {})           = True
       isExpect _                     = False
 
-      (sysUnExpect,msgs1) = span isSysUnExpect (sort msgs)
+      (sysUnExpect,msgs1) = span (\m -> isSysUnExpect m || isEOI m) (sort msgs)
       (unExpect   ,msgs2) = span isUnExpect msgs1
       (expect     ,msgs3) = span isExpect msgs2
 
@@ -85,7 +86,11 @@ showErrorMessages msgOr msgUnknown msgExpecting msgUnExpected msgEndOfInput msgs
       showUnExpect    = showMany msgUnExpected unExpect
       showSysUnExpect 
           | null sysUnExpect = ""
-          | otherwise        = msgUnExpected ++ " " ++ (messageString $ head sysUnExpect)
+          | otherwise        = 
+              let msg = head sysUnExpect
+              in msgUnExpected ++ " " ++ 
+                     if (isEOI msg) then msgEndOfInput ++ " " ++ (messageString $ head sysUnExpect)
+                                    else messageString $ head sysUnExpect
       showMessages      = showMany "" msgs3
 
       showMany pre msgs = case clean (map messageString msgs) of
@@ -116,4 +121,4 @@ showParserError showPos (ParserError mPos msgs) =
         let posStr = case mPos of
                        Nothing -> "unknown position"
                        (Just pos) -> showPos pos
-        in "parse error at " ++ posStr ++ ": " ++ (showErrorMessages "or" "unknown parse error" "expecting" "unexpected" "end of input" msgs)
+        in "parse error at " ++ posStr ++ ": " ++ (showErrorMessages "or" "unknown parse error" "expecting" "unexpected" "end of" msgs)

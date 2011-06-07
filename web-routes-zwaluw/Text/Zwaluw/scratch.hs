@@ -222,7 +222,7 @@ printAs :: PrinterParser a b -> String -> PrinterParser a b
 printAs r s = r { ser = map (first (const (s ++))) . take 1 . ser r }
 
 readEither :: (Read a) => [String] -> StateT ErrorPos (Either RouteError) [(a, [String])]
-readEither [] = throwRouteError RouteEOF
+readEither [] = throwRouteError EOF
 readEither (p:ps) = 
           case reads p of
             [] -> throwRouteError (Other $ "readEither failed on " ++ p)
@@ -247,7 +247,7 @@ int = readshow
 string :: PrinterParser [String] r (String :- r)
 string = val ps ss 
     where
-      ps [] = routeError RouteEOF
+      ps [] = routeError EOF
       ps (h:t) = return [(h, ("" : t))]
       ss str = return [\(s:ss) -> (str ++ s) : ss]
 
@@ -255,7 +255,7 @@ string = val ps ss
 satisfy :: (String -> Bool) -> PrinterParser [String] r (String :- r)
 satisfy p = val ps ss
     where
-      ps []    = routeError RouteEOF
+      ps []    = routeError EOF
       ps (h:t) = if p h
                  then return [(h, t)]
                  else Left $ strMsg ("predicate failed on " ++ h)

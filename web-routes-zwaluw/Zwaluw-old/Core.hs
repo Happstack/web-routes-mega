@@ -90,7 +90,7 @@ plus _ a = a
 
 data RouteError 
     = InvalidLit String String
-    | RouteEOF
+    | EOF
     | Other String
       deriving (Eq, Ord, Read, Show, Typeable, Data)
 
@@ -114,7 +114,7 @@ lit l = PrinterParser pf sf
           case stripPrefix l p of
             (Just p') -> return [(id, p':ps)]
             Nothing -> routeError (InvalidLit p l)
-      pf [] = routeError RouteEOF
+      pf [] = routeError EOF
       sf b = return [(( \(s:ss) -> ((l ++ s) : ss)), b)]
 {-
 eor :: PrinterParser RouteError r r

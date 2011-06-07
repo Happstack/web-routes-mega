@@ -50,8 +50,8 @@ lit l = PrinterParser pf sf
     where
       pf = Parser $ \tok pos ->
            case tok of
-             [] -> mkParserError pos [RouteEOF]
-             ("":_) | (not $ null l) -> mkParserError pos [RouteEOS]
+             [] -> mkParserError pos [EOI "input", Expect (show l)]
+             ("":_) | (not $ null l) -> mkParserError pos [EOI "segment", Expect (show l)]
              (p:ps) ->
                  case stripPrefix l p of
                    (Just p') -> 
@@ -72,7 +72,7 @@ eops :: PrinterParser (ParserError StringsPos) [String] r r
 eops = PrinterParser 
        (Parser $ \path pos -> case path of
                    []      -> [Right ((id, []), addString 1 pos)]
---                   [] -> mkParserError pos [RouteEOF]
+--                   [] -> mkParserError pos [EOI "input"]
                    ("":ps) -> 
                           [ Right ((id, ps), addString 1 pos) ]
                    (p:_) -> mkParserError pos [Message $ "path-segment not entirely consumed: " ++ p])
@@ -83,8 +83,8 @@ satisfy :: (Char -> Bool) -> PrinterParser (ParserError StringsPos) [String] r (
 satisfy p = val
   (Parser $ \tok pos -> 
        case tok of
-         []          -> mkParserError pos [RouteEOF]
-         ("":ss)     -> mkParserError pos [RouteEOS]
+         []          -> mkParserError pos [EOI "input"]
+         ("":ss)     -> mkParserError pos [EOI "segment"]
          ((c:cs):ss)
              | p c -> 
                  do [Right ((c, cs : ss), addChar 1 pos )]
@@ -101,8 +101,8 @@ satisfyStr :: (String -> Bool) -> PrinterParser (ParserError StringsPos) [String
 satisfyStr p = val
   (Parser $ \tok pos -> 
        case tok of
-         []          -> mkParserError pos [RouteEOF]
-         ("":ss)     -> mkParserError pos [RouteEOS]
+         []          -> mkParserError pos [EOI "input"]
+         ("":ss)     -> mkParserError pos [EOI "segment"]
          (s:ss)
              | p s -> 
                  do [Right ((s, "":ss), addString 1 pos )]
@@ -147,8 +147,8 @@ anyString = val ps ss
     where
       ps = Parser $ \tok pos ->
            case tok of
-             []     -> mkParserError pos [RouteEOF]
-             ("":_) -> mkParserError pos [RouteEOS]
+             []     -> mkParserError pos [EOI "input", Expect "any string"]
+             ("":_) -> mkParserError pos [EOI "segment", Expect "any string"]
              (s:ss) -> [Right ((s, ss), addString 1 pos)]
       ss str = [\ss -> str : ss]
 

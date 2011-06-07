@@ -21,9 +21,10 @@ toSite handler r@(PrinterParser pf sf) =
              case unparse1 [] r url of
                Nothing -> error "formatPathSegments failed to produce a url"
                (Just ps) -> (ps, [])
-         , parsePathSegments = mapLeft (showParserError showPos . condenseErrors) . (parse1 isComplete r)
+         , parsePathSegments = \paths -> mapLeft (showErrors paths) (parse1 isComplete r paths)
          }
     where
-      mapLeft f = either (Left . f) Right
+      mapLeft f       = either (Left . f) Right
+      showErrors paths errs = (showParserError showPos $ condenseErrors errs) ++ " while parsing " ++ show paths
       showPos (StringsPos s c) = "segment " ++ show (s + 1) ++ ", character " ++ show c
 
