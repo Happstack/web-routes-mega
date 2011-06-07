@@ -4,7 +4,9 @@ import Web.Routes
 import Web.Routes.Zwaluw
 import Text.Zwaluw.Core
 import Text.Zwaluw.Combinators
+import Text.Zwaluw.Error
 import Text.Zwaluw.HList
+import Text.Zwaluw.Strings
 import Text.Zwaluw.TH
 import Prelude hiding (id, (.), (/))
 import Control.Category
@@ -28,7 +30,7 @@ sitemap :: Route Sitemap
 sitemap =
     (  rHome
     <> lit "users" . users
-    <> rArticle . (lit "article" </> int . lit "-" . string)
+    <> rArticle . (lit "article" </> int . lit "-" . anyString)
     )
   where
     users  =  lit "/" . rUserOverview
@@ -46,6 +48,13 @@ showurl :: Sitemap -> IO ()
 showurl url = 
     let (ps, params) = formatPathSegments site url
     in putStrLn (encodePathInfo ps params)
+
+-- testParse :: [String] -> IO ()
+testParse paths = 
+    case parse1 isComplete sitemap paths of
+      (Left e) -> do print e
+                     putStrLn (showRouteError $ condenseErrors e)
+      (Right a) -> print a
 
 test :: String -> IO ()
 test path = 
