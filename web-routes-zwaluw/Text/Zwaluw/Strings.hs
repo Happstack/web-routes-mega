@@ -76,7 +76,7 @@ satisfy p = val
              | p c -> 
                  do [Right ((c, cs : ss), incMinor 1 pos )]
              | otherwise -> 
-                 do mkParserError pos [SysUnExpect [c]]
+                 do mkParserError pos [SysUnExpect $ show c]
   )
   (\c -> [ \paths -> case paths of [] -> [[c]] ; (s:ss) -> ((c:s):ss) | p c ])
 
@@ -94,7 +94,7 @@ satisfyStr p = val
              | p s -> 
                  do [Right ((s, "":ss), incMajor 1 pos )]
              | otherwise -> 
-                 do mkParserError pos [SysUnExpect s]
+                 do mkParserError pos [SysUnExpect $ show s]
   )
   (\str -> [ \strings -> case strings of [] -> [str] ; (s:ss) -> ((str++s):ss) | p str ])
 
