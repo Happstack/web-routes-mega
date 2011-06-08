@@ -16,10 +16,10 @@ data Sitemap
    | Article Int String
    deriving (Eq, Show)
 
--- derive the routing combinators like rHome, rUserOverview, etc
+-- | derive the routing combinators like rHome, rUserOverview, etc
 $(derivePrinterParsers ''Sitemap)
 
--- | The router. Specifies how to parse a URL into a Sitemap and back.
+-- | The router. Specifies how to parse a url string into a Sitemap and back
 sitemap :: Router Sitemap
 sitemap =
     (  rHome
@@ -32,9 +32,7 @@ sitemap =
 
 -- | Convert the 'Sitemap' into a 'Site' that can be used with web-routes
 site :: Site Sitemap (IO ())
-site = toSite web' sitemap
-    where
-      web'= \f u -> unRouteT (web u) f
+site = toSite (flip $ unRouteT . web ) sitemap
 
 -- | this function handles routing the parsed url to a handler
 web :: Sitemap -> RouteT Sitemap IO ()
@@ -43,6 +41,20 @@ web url =
       _ -> do liftIO $ print url
               s <- showURL url
               liftIO $ putStrLn s
+
+-- | run the site using the supplied url string
+test :: String -- ^ incoming url
+     -> IO ()
+test path = 
+    case runSite "" site path of
+      (Left e)   -> putStrLn e
+      (Right io) -> io
+
+-- | interactively call 'test'
+main :: IO ()
+main = mapM_ test =<< fmap lines getContents
+        
+-- bonus functions:
 
 -- | a little function to test rendering a url
 showurl :: Sitemap -> String
@@ -57,15 +69,3 @@ testParse paths =
       (Left e)  -> Left (show $ condenseErrors e)
       (Right a) -> Right a
 
--- | run the site using the supplied url string
-test :: String -- ^ incoming url
-     -> IO ()
-test path = 
-    case runSite "" site path of
-      (Left e)   -> putStrLn e
-      (Right io) -> io
-
--- | interactively call 'test'
-main :: IO ()
-main = mapM_ test =<< fmap lines getContents
-        
