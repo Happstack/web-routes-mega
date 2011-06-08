@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, TypeOperators #-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, TypeOperators, TypeFamilies #-}
 module Text.Zwaluw.Prim
     ( -- * Types
     Parser(..), PrinterParser(..), (.~)
@@ -18,7 +18,7 @@ import Control.Monad.Error (Error(..))
 import Data.Either         (partitionEithers)
 import Data.Function       (on)
 import Data.Monoid         (Monoid(mappend, mempty))
-import Text.Zwaluw.HList   ((:-)(..), hdMap, hdTraverse)
+import Text.Zwaluw.HStack   ((:-)(..), hdMap, hdTraverse)
 import Text.Zwaluw.Pos     (ErrorPosition(..), InitialPosition(..), Pos)
 
 compose
@@ -143,14 +143,14 @@ val rs ss = PrinterParser rs' ss'
       ss' =  (\(a :- r) -> map (\f -> (f, r)) (ss a))
 
 -- | Give all possible parses or errors.
-parse :: (InitialPosition (Pos e)) => PrinterParser e tok () a -> tok -> [Either e (a, tok)]
+parse :: forall e a p tok. (InitialPosition e) => PrinterParser e tok () a -> tok -> [Either e (a, tok)]
 parse p s = 
-    map (either Left (\((f, tok), _) -> Right (f (), tok))) $ runParser (prs p) s initialPos
+    map (either Left (\((f, tok), _) -> Right (f (), tok))) $ runParser (prs p) s (initialPos (Nothing :: Maybe e))
 
 -- | Give the first parse, for PrinterParsers with a parser that yields just one value. 
 -- Otherwise return the error (or errors) with the highest error position.
-parse1 :: (ErrorPosition e, InitialPosition (Pos e), Show e, Ord (Pos e)) =>
-     (tok -> Bool) -> PrinterParser e tok () (a :- ()) -> tok -> Either [e] a
+parse1 :: (ErrorPosition e, InitialPosition e, Show e, Ord (Pos e)) =>
+          (tok -> Bool) -> PrinterParser e tok () (a :- ()) -> tok -> Either [e] a
 parse1 isComplete r paths = 
     let results = parse r paths
     in case [ a | (Right (a,tok)) <- results, isComplete tok ] of
@@ -162,7 +162,7 @@ unparse :: tok -> PrinterParser e tok () url -> url -> [tok]
 unparse tok p = (map (($ tok) . fst)) . ser p
 
 -- | Give the first serialization, for PrinterParsers with a serializer that needs just one value.
-unparse1 :: (Error e) => tok -> PrinterParser e tok () (a :- ()) -> a -> Maybe tok
+unparse1 :: tok -> PrinterParser e tok () (a :- ()) -> a -> Maybe tok
 unparse1 tok p a = 
     case unparse tok p (a :- ()) of
       [] -> Nothing

@@ -36,7 +36,8 @@ Library
                           TemplateHaskell,
                           TypeFamilies,
                           TypeFamilies,
-                          TypeOperators
+                          TypeOperators,
+                          TypeSynonymInstances
 --                          UndecidableInstances
 
 source-repository head

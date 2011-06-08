@@ -1,13 +1,15 @@
-{-# LANGUAGE DeriveDataTypeable, FlexibleContexts, FlexibleInstances, TemplateHaskell, TypeFamilies, TypeOperators #-}
+-- | a 'PrinterParser' library for working with '[String]'
+{-# LANGUAGE DeriveDataTypeable, FlexibleContexts, FlexibleInstances, TemplateHaskell, TypeFamilies, TypeSynonymInstances, TypeOperators #-}
 module Text.Zwaluw.Strings
     (
-    -- * Position information
-    StringsPos(..), addString, addChar
+    -- * Types
+      StringsError
     -- * Combinators
-    , (</>), alpha, anyChar, anyString, char, digit, eops, int
+    , (</>), alpha, anyChar, anyString, char, digit, eos, int
     , integer, lit, satisfy, satisfyStr, space
-    -- * Misc
-    , isComplete
+    -- * Running the 'PrinterParser'
+    , isComplete, parseStrings, unparseStrings
+    
     )
     where
 
@@ -18,36 +20,21 @@ import Data.Data               (Data, Typeable)
 import Data.List               (stripPrefix)
 import Data.String             (IsString(..))
 import Text.Zwaluw.Combinators (opt, rCons, rList1)
-import Text.Zwaluw.Error       (ParserError(..),ErrorMsg(..), (<?>), mkParserError)
-import Text.Zwaluw.HList       ((:-)(..))
-import Text.Zwaluw.Pos         (InitialPosition(..))
-import Text.Zwaluw.Prim        (Parser(..), PrinterParser(..), xmaph, val)
+import Text.Zwaluw.Error       (ParserError(..),ErrorMsg(..), (<?>), condenseErrors, mkParserError)
+import Text.Zwaluw.HStack       ((:-)(..))
+import Text.Zwaluw.Pos         (InitialPosition(..), MajorMinorPos(..), incMajor, incMinor)
+import Text.Zwaluw.Prim        (Parser(..), PrinterParser(..), parse1, xmaph, unparse1, val)
 
-data StringsPos = StringsPos 
-    { string    :: Integer 
-    , character :: Integer
-    }
-    deriving (Eq, Ord, Typeable, Data)
+type StringsError = ParserError MajorMinorPos
 
-instance Show StringsPos where
-    show (StringsPos s c) = "string " ++ show s ++ ", character " ++ show c
+instance InitialPosition StringsError where
+    initialPos _ = MajorMinorPos 0 0
 
-instance InitialPosition StringsPos where
-    initialPos = StringsPos 0 0
-
--- | increment the string position by 'i' and reset the character position to 0
-addString :: (Integral i) => i -> StringsPos -> StringsPos
-addString i (StringsPos seg chr) = StringsPos (seg + (fromIntegral i)) 0
-
--- | increment the character position by 'i'
-addChar :: (Integral i) => i -> StringsPos -> StringsPos
-addChar i (StringsPos seg chr) = StringsPos seg (chr + (fromIntegral i))
-
-instance a ~ b => IsString (PrinterParser (ParserError StringsPos) [String] a b) where
+instance a ~ b => IsString (PrinterParser StringsError [String] a b) where
     fromString = lit
 
--- | a constant string.
-lit :: String -> PrinterParser (ParserError StringsPos) [String] r r
+-- | a constant string
+lit :: String -> PrinterParser StringsError [String] r r
 lit l = PrinterParser pf sf 
     where
       pf = Parser $ \tok pos ->
@@ -57,31 +44,29 @@ lit l = PrinterParser pf sf
              (p:ps) ->
                  case stripPrefix l p of
                    (Just p') -> 
-                       do [Right ((id, p':ps), addChar (length l) pos)]
+                       do [Right ((id, p':ps), incMinor (length l) pos)]
                    Nothing -> 
                        mkParserError pos [UnExpect (show p), Expect (show l)]
-      sf b = [(( \(s:ss) -> ((l ++ s) : ss)), b)]
-
-
+      sf b = [ (\strings -> case strings of [] -> [l] ; (s:ss) -> ((l ++ s) : ss), b)]
 
 infixr 9 </>
--- | equivalent to @f . eops . g@
-(</>) :: PrinterParser (ParserError StringsPos) [String] b c -> PrinterParser (ParserError StringsPos) [String] a b -> PrinterParser (ParserError StringsPos) [String] a c
-f </> g = f . eops . g
+-- | equivalent to @f . eos . g@
+(</>) :: PrinterParser StringsError [String] b c -> PrinterParser StringsError [String] a b -> PrinterParser StringsError [String] a c
+f </> g = f . eos . g
 
--- | end of path segment
-eops :: PrinterParser (ParserError StringsPos) [String] r r
-eops = PrinterParser 
+-- | end of string
+eos :: PrinterParser StringsError [String] r r
+eos = PrinterParser 
        (Parser $ \path pos -> case path of
-                   []      -> [Right ((id, []), addString 1 pos)]
+                   []      -> [Right ((id, []), incMajor 1 pos)]
 --                   [] -> mkParserError pos [EOI "input"]
                    ("":ps) -> 
-                          [ Right ((id, ps), addString 1 pos) ]
+                          [ Right ((id, ps), incMajor 1 pos) ]
                    (p:_) -> mkParserError pos [Message $ "path-segment not entirely consumed: " ++ p])
        (\a -> [(("" :), a)])
 
 -- | statisfy a 'Char' predicate
-satisfy :: (Char -> Bool) -> PrinterParser (ParserError StringsPos) [String] r (Char :- r)
+satisfy :: (Char -> Bool) -> PrinterParser StringsError [String] r (Char :- r)
 satisfy p = val
   (Parser $ \tok pos -> 
        case tok of
@@ -89,7 +74,7 @@ satisfy p = val
          ("":ss)     -> mkParserError pos [EOI "segment"]
          ((c:cs):ss)
              | p c -> 
-                 do [Right ((c, cs : ss), addChar 1 pos )]
+                 do [Right ((c, cs : ss), incMinor 1 pos )]
              | otherwise -> 
                  do mkParserError pos [SysUnExpect [c]]
   )
@@ -99,7 +84,7 @@ satisfy p = val
 -- | satisfy a 'String' predicate. 
 --
 -- Note: must match the entire remainder of the 'String' in this segment
-satisfyStr :: (String -> Bool) -> PrinterParser (ParserError StringsPos) [String] r (String :- r)
+satisfyStr :: (String -> Bool) -> PrinterParser StringsError [String] r (String :- r)
 satisfyStr p = val
   (Parser $ \tok pos -> 
        case tok of
@@ -107,56 +92,75 @@ satisfyStr p = val
          ("":ss)     -> mkParserError pos [EOI "segment"]
          (s:ss)
              | p s -> 
-                 do [Right ((s, "":ss), addString 1 pos )]
+                 do [Right ((s, "":ss), incMajor 1 pos )]
              | otherwise -> 
                  do mkParserError pos [SysUnExpect s]
   )
-  (\str -> [ \paths -> case paths of [] -> [str] ; (s:ss) -> ((str++s):ss) | p str ])
+  (\str -> [ \strings -> case strings of [] -> [str] ; (s:ss) -> ((str++s):ss) | p str ])
 
 
 -- | ascii digits @\'0\'..\'9\'@
-digit :: PrinterParser (ParserError StringsPos) [String] r (Char :- r)
+digit :: PrinterParser StringsError [String] r (Char :- r)
 digit = satisfy isDigit <?> "a digit 0-9"
 
 -- | matches alphabetic Unicode characters (lower-case, upper-case and title-case letters, 
 -- plus letters of caseless scripts and modifiers letters).  (Uses 'isAlpha')
-alpha :: PrinterParser (ParserError StringsPos) [String] r (Char :- r)
+alpha :: PrinterParser StringsError [String] r (Char :- r)
 alpha = satisfy isAlpha <?> "an alphabetic Unicode character"
 
 -- | matches white-space characters in the Latin-1 range. (Uses 'isSpace')
-space :: PrinterParser (ParserError StringsPos) [String] r (Char :- r)
+space :: PrinterParser StringsError [String] r (Char :- r)
 space = satisfy isSpace <?> "a white-space character"
 
 -- | any character
-anyChar :: PrinterParser (ParserError StringsPos) [String] r (Char :- r)
+anyChar :: PrinterParser StringsError [String] r (Char :- r)
 anyChar = satisfy (const True)
 
 -- | matches the specified character
-char :: Char -> PrinterParser (ParserError StringsPos) [String] r (Char :- r)
+char :: Char -> PrinterParser StringsError [String] r (Char :- r)
 char c = satisfy (== c) <?> show [c]
 
 -- | matches an 'Int'
-int :: PrinterParser (ParserError StringsPos) [String] r (Int :- r)
+int :: PrinterParser StringsError [String] r (Int :- r)
 int = xmaph read (Just . show) (opt (rCons . char '-') . (rList1 digit))
 
 -- | matches an 'Integer'
-integer :: PrinterParser (ParserError StringsPos) [String] r (Integer :- r)
+integer :: PrinterParser StringsError [String] r (Integer :- r)
 integer = xmaph read (Just . show) (opt (rCons . char '-') . (rList1 digit))
 
 -- | matches any 'String'
-anyString :: PrinterParser (ParserError StringsPos) [String] r (String :- r)
+anyString :: PrinterParser StringsError [String] r (String :- r)
 anyString = val ps ss 
     where
       ps = Parser $ \tok pos ->
            case tok of
              []     -> mkParserError pos [EOI "input", Expect "any string"]
              ("":_) -> mkParserError pos [EOI "segment", Expect "any string"]
-             (s:ss) -> [Right ((s, ss), addString 1 pos)]
+             (s:ss) -> [Right ((s, ss), incMajor 1 pos)]
       ss str = [\ss -> str : ss]
 
 -- | Predicate to test if we have parsed all the strings.
 -- Typically used as argument to 'parse1'
+--
+-- see also: 'parseStrings'
 isComplete :: [String] -> Bool
 isComplete []   = True
 isComplete [""] = True
 isComplete _    = False
+
+-- | run the parser
+--
+-- Returns the first complete parse or a parse error.
+--
+-- > parseStrings (rUnit . lit "foo") ["foo"]
+parseStrings :: PrinterParser StringsError [String] () (r :- ())
+             -> [String]
+             -> Either StringsError r
+parseStrings pp strs = 
+    either (Left . condenseErrors) Right $ parse1 isComplete pp strs
+
+-- | run the printer
+--
+-- > unparseStrings (rUnit . lit "foo") ()
+unparseStrings :: PrinterParser e [String] () (r :- ()) -> r -> Maybe [String]
+unparseStrings pp r = unparse1 [] pp r

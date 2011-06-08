@@ -1,3 +1,4 @@
+-- | a collection of generic parsing combinators that can work with any token and error type.
 {-# LANGUAGE TemplateHaskell, TypeOperators #-}
 module Text.Zwaluw.Combinators 
     ( (<>), duck, duck1, opt
@@ -15,7 +16,7 @@ import Control.Monad       (guard)
 import Control.Monad.Error (Error)
 import Data.Monoid         (Monoid(mappend))
 import Text.Zwaluw.Prim    (Parser(..), PrinterParser(..), (.~), val, xpure)
-import Text.Zwaluw.HList   ((:-)(..), arg, hhead)
+import Text.Zwaluw.HStack   ((:-)(..), arg, hhead)
 import Text.Zwaluw.TH      (derivePrinterParsers)
 
 infixr 8 <>

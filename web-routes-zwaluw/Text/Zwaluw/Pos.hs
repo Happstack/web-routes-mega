@@ -4,35 +4,38 @@ module Text.Zwaluw.Pos
     , InitialPosition(..)
     , ErrorPosition(..)
     , MajorMinorPos(..)
-    , addMajor, addMinor
+    , incMajor, incMinor
     ) 
     where
 
 import Data.Data (Data, Typeable)
 
-type family Pos a :: *
+-- | type synonym family that maps an error type to its position type
+type family Pos err :: *
 
-class ErrorPosition e where
-    getPosition :: e -> Maybe (Pos e)
+-- | extract the position information from an error 
+class ErrorPosition err where
+    getPosition :: err -> Maybe (Pos err)
 
-class InitialPosition a where
-    initialPos :: a
+-- | the initial position for a position type
+class InitialPosition e where
+    initialPos :: Maybe e -> Pos e
 
+-- | A basic 2-axis position type (e.g. line, character)
 data MajorMinorPos = MajorMinorPos 
     { major :: Integer 
     , minor :: Integer
     }
-    deriving (Eq, Ord, Read, Show, Typeable, Data)
+    deriving (Eq, Ord, Typeable, Data)
 
--- should this really be tied to the error type that uses it ?
--- if so, that affects addY
-instance InitialPosition MajorMinorPos where
-    initialPos = MajorMinorPos 0 0
+-- | increment major position by 'i', reset minor position to 0.. 
+-- if you wanted something else.. too bad.
+incMajor :: (Integral i) => i -> MajorMinorPos -> MajorMinorPos
+incMajor i (MajorMinorPos maj min) = MajorMinorPos (maj + (fromIntegral i)) 0
 
-addMajor :: (Integral i) => i -> MajorMinorPos -> MajorMinorPos
-addMajor i (MajorMinorPos maj min) = MajorMinorPos (maj + (fromIntegral i)) 0
+-- | increment minor position by 'i'
+incMinor :: (Integral i) => i -> MajorMinorPos -> MajorMinorPos
+incMinor i (MajorMinorPos maj min) = MajorMinorPos maj (min + (fromIntegral i))
 
-addMinor :: (Integral i) => i -> MajorMinorPos -> MajorMinorPos
-addMinor i (MajorMinorPos maj min) = MajorMinorPos maj (min + (fromIntegral i))
-
-
+instance Show MajorMinorPos where
+    show (MajorMinorPos s c) = "(" ++ show s ++ ", " ++ show c ++ ")"

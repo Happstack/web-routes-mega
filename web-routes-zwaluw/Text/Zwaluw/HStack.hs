@@ -1,5 +1,6 @@
+-- | a simple heteregenous stack library
 {-# LANGUAGE TypeOperators #-}
-module Text.Zwaluw.HList 
+module Text.Zwaluw.HStack
     ( (:-)(..)
     , arg, hdTraverse, hdMap, hhead, htail, pop 
     ) where

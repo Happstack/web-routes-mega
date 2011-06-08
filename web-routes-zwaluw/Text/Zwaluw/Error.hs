@@ -10,18 +10,21 @@ import Text.Zwaluw.Pos
 
 data ErrorMsg
     = SysUnExpect String
-    | EOI String
-    | UnExpect String
-    | Expect String
-    | Message String
+    | EOI         String
+    | UnExpect    String
+    | Expect      String
+    | Message     String
       deriving (Eq, Ord, Read, Show, Typeable, Data)
 
+-- | extract the 'String' from an 'ErrorMsg'.
+-- Note: the resulting 'String' will not include any information about what constructor it came from.
 messageString :: ErrorMsg -> String
 messageString (Expect s)         = s
 messageString (UnExpect s)       = s
 messageString (SysUnExpect s)    = s
 messageString (EOI s)            = s
 messageString (Message s)        = s
+
 
 data ParserError pos = ParserError (Maybe pos) [ErrorMsg]
     deriving (Eq, Ord, Typeable, Data)
@@ -31,7 +34,6 @@ type instance Pos (ParserError p) = p
 instance ErrorPosition (ParserError p) where
     getPosition (ParserError mPos _) = mPos
 
-
 {-
 instance ErrorList ParserError where
     listMsg s = [ParserError Nothing (Other s)]
@@ -40,13 +42,19 @@ instance ErrorList ParserError where
 instance Error (ParserError p) where
     strMsg s = ParserError Nothing [Message s]
 
+-- | lift a 'pos' and '[ErrorMsg]' into a parse error
+-- 
+-- This is intended to be used inside a 'Parser' like this:
+--
+-- > Parser $ \tok pos -> mkParserError pos [Message "just some error..."]
 mkParserError :: pos -> [ErrorMsg] -> [Either (ParserError pos) a]
 mkParserError pos e = [Left (ParserError (Just pos) e)]
-
 
 infix  0 <?>
 
 -- | annotate a parse error with an additional 'Expect' message
+--
+-- > satisfy isUpper <?> 'an uppercase character'
 (<?>) :: PrinterParser (ParserError p) tok a b -> String -> PrinterParser (ParserError p) tok a b
 router <?> msg = 
     router { prs = Parser $ \tok pos ->
