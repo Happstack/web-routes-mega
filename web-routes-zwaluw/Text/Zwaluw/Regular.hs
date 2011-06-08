@@ -14,43 +14,43 @@ module Web.Zwaluw.Regular
   , PF
   ) where
 
-import Text.Zwaluw.Core
+import Text.Zwaluw.Prim
+import Text.Zwaluw.HStack
 import Generics.Regular
 
--- infixr :&
-
+infixr :&
 
 -- | The type of the list of routers generated for type @r@.
-type PrinterParsers e r = PrinterParserList e (PF r) r
+type PrinterParsers e tok r = PrinterParserList e tok (PF r) r
 
 -- | Creates the routers for type @r@, one for each constructor. For example:
 --
 --   @Z rHome :& Z rUserOverview :& Z rUserDetail :& Z rArticle = mkPrinterParsers@
-mkPrinterParsers :: (MkPrinterParsers (PF r), Regular r) => PrinterParsers e r
-mkPrinterParsers = mkPrinterParsers' to (Right . from)
+mkPrinterParsers :: (MkPrinterParsers (PF r), Regular r) => PrinterParsers e tok r
+mkPrinterParsers = mkPrinterParsers' to (Just . from)
 
-data family PrinterParserList e f r
+data family PrinterParserList e tok f r
 class MkPrinterParsers (f :: * -> *) where
-  mkPrinterParsers' :: (f r -> r) -> (r -> Either [e] (f r)) -> PrinterParserList e f r
+  mkPrinterParsers' :: (f r -> r) -> (r -> Maybe (f r)) -> PrinterParserList e tok f r
 
-data instance PrinterParserList e (C c f) r = Z (forall t. PrinterParser e (PrinterParserLhs f r t) (r :- t))
+data instance PrinterParserList e tok (C c f) r = Z (forall t. PrinterParser e tok (PrinterParserLhs f r t) (r :- t))
 instance MkPrinterParser f => MkPrinterParsers (C c f) where
-  mkPrinterParsers' addLR matchLR = Z $ pure (hdMap (addLR . C) . mkP) (fmap mkS . hdTraverse (fmap unC . matchLR))
+  mkPrinterParsers' addLR matchLR = Z $ xpure (hdMap (addLR . C) . mkP) (fmap mkS . hdTraverse (fmap unC . matchLR))
 
-data instance PrinterParserList e (f :+: g) r = PrinterParserList e f r :& PrinterParserList e g r
+data instance PrinterParserList e tok (f :+: g) r = PrinterParserList e tok f r :& PrinterParserList e tok g r
 instance (MkPrinterParsers f, MkPrinterParsers g) => MkPrinterParsers (f :+: g) where
   mkPrinterParsers' addLR matchLR = mkPrinterParsers' (addLR . L) (matchL matchLR) 
                           :& mkPrinterParsers' (addLR . R) (matchR matchLR)
     where
-      matchL :: (r -> Either [e] ((f :+: g) r)) -> r -> Either [e] (f r)
+      matchL :: (r ->  Maybe ((f :+: g) r)) -> r -> Maybe (f r)
       matchL frm r = case frm r of 
-        Right (L f) -> Right f
---         _ -> Nothing
+        Just (L f) -> Just f
+        _ -> Nothing
 
-      matchR :: (r -> Either [e] ((f :+: g) r)) -> r -> Either [e] (g r)
+      matchR :: (r -> Maybe ((f :+: g) r)) -> r -> Maybe (g r)
       matchR frm r = case frm r of 
-        Right (R f) -> Right f
---        _ -> Nothing
+        Just (R f) -> Just f
+        _ -> Nothing
 
 
 type family PrinterParserLhs (f :: * -> *) (r :: *) (t :: *) :: *
