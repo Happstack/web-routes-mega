@@ -11,7 +11,7 @@ Cabal-Version:    >= 1.6
 Build-type:       Simple
 
 Library
-        Build-Depends:    base >= 4 && < 5, parsec >= 3, template-haskell, web-routes >= 0.19
+        Build-Depends:    base >= 4 && < 5, parsec >= 2 && < 4, template-haskell, web-routes >= 0.19
         Exposed-Modules:  Web.Routes.TH
 
 source-repository head
