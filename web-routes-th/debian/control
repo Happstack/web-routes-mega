@@ -8,11 +8,11 @@ Build-Depends: debhelper (>= 7.0),
                cdbs,
                ghc (>= 6.8),
                ghc-prof,
-               libghc-parsec2-prof,
+               libghc-parsec3-prof,
                libghc-web-routes-prof (>= 0.19)
 Build-Depends-Indep: ghc-doc,
                      haddock,
-                     libghc-parsec-doc,
+                     libghc-parsec3-doc,
                      libghc-web-routes-doc (>= 0.19)
 Standards-Version: 3.8.1
 
