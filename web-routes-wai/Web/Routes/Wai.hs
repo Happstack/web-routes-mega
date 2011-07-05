@@ -39,7 +39,7 @@ handleWai approot handler = handleWai_ toPathInfo fromPathInfo approot handler
 
 handleWaiRouteT_ :: (url -> String) -> (String -> Either String url) -> String -> (url -> Request -> RouteT url IO Response) -> Application
 handleWaiRouteT_  toPathInfo fromPathInfo approot handler =
-   handleWai_ toPathInfo fromPathInfo approot (\toPathInfo' url request -> runRouteT (handler url request) toPathInfo') 
+   handleWai_ toPathInfo fromPathInfo approot (\toPathInfo' url request -> unRouteT (handler url request) toPathInfo')
 
 handleWaiRouteT :: (PathInfo url) => String -> (url -> Request -> RouteT url IO Response) -> Application
 handleWaiRouteT approot handler = handleWaiRouteT_ toPathInfo fromPathInfo approot handler
