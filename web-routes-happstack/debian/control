@@ -12,7 +12,7 @@ Build-Depends: debhelper (>= 7.0),
                libghc-web-routes-prof (>= 0.18)
 Build-Depends-Indep: ghc-doc,
                      haddock,
-                     haskell-happstack-server-doc,
+                     libghc-happstack-server-doc,
                      libghc-web-routes-doc (>= 0.18)
 Standards-Version: 3.8.1
 
