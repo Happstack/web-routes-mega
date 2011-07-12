@@ -34,7 +34,7 @@ instance (Happstack m) => Happstack (RouteT url m)
 -- see also: 'implSite_'
 implSite :: (Functor m, Monad m, MonadPlus m, ServerMonad m) => 
             String         -- ^ "http://example.org"
-         -> FilePath       -- ^ path to this handler, .e.g. "/route/"
+         -> FilePath       -- ^ path to this handler, .e.g. "/route/" or ""
          -> Site url (m a) -- ^ the 'Site'
          -> m a
 implSite domain approot siteSpec =
@@ -51,7 +51,7 @@ implSite domain approot siteSpec =
 -- see also: 'implSite'
 implSite_ :: (Functor m, Monad m, MonadPlus m, ServerMonad m) => 
              String          -- ^ "http://example.org"
-          -> FilePath        -- ^ path to this handler, .e.g. "/route/"
+          -> FilePath        -- ^ path to this handler, .e.g. "/route/" or ""
           -> Site url (m a)  -- ^ the 'Site'
           -> m (Either String a) 
 implSite_ domain approot siteSpec =
