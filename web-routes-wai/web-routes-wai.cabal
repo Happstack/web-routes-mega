@@ -1,5 +1,5 @@
 Name:             web-routes-wai
-Version:          0.19.2
+Version:          0.20.0
 License:          BSD3
 License-File:     LICENSE
 Author:           jeremy@seereason.com
@@ -12,7 +12,12 @@ Cabal-Version:    >= 1.6
 Build-type:       Simple
 
 Library
-        Build-Depends:    base >= 4 && < 5, bytestring, wai, web-routes >= 0.22
+        Build-Depends:    base        >= 4 && < 5,
+                          bytestring  == 0.9.*,
+                          enumerator  == 0.4.*,
+                          http-types  == 0.6.*,
+                          wai         == 0.4.*,
+                          web-routes  >= 0.25.2 && < 0.26
         Exposed-Modules:  Web.Routes.Wai
 
 source-repository head
