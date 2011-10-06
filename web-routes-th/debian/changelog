@@ -1,3 +1,9 @@
+haskell-web-routes-th (0.21.1) unstable; urgency=low
+
+  * derivePathInfo now uses Text
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Thu, 06 Oct 2011 16:55:21 -0500
+
 haskell-web-routes-th (0.21.0) unstable; urgency=low
 
   * Updated to web-routes-0.26

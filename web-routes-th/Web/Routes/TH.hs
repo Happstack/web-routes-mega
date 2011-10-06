@@ -4,6 +4,7 @@ module Web.Routes.TH where
 
 import Control.Monad (ap, replicateM)
 import Data.List (intercalate)
+import Data.Text (pack, unpack)
 import Language.Haskell.TH
 import Text.ParserCombinators.Parsec ((<|>),many1)
 import Web.Routes.PathInfo
@@ -38,7 +39,7 @@ derivePathInfo name
                                   |  (conName, nArgs) <- cons ]
                    toURLWork :: String -> [Name] -> ExpQ
                    toURLWork conStr args
-                       = foldr1 (\a b -> appE (appE [| (++) |] a) b) ([| [conStr] |] : [ [| toPathSegments $(varE arg) |] | arg <- args ])
+                       = foldr1 (\a b -> appE (appE [| (++) |] a) b) ([| [pack conStr] |] : [ [| toPathSegments $(varE arg) |] | arg <- args ])
                funD 'toPathSegments [clause [varP inp] (normalB body)  []]
       fromPathSegmentsFn :: [(Name,Int)] -> DecQ
       fromPathSegmentsFn cons
@@ -47,7 +48,7 @@ derivePathInfo name
                             | (conName, nArgs) <- cons])
                    parseCon :: Name -> Int -> ExpQ
                    parseCon conName nArgs = foldl1 (\a b -> appE (appE [| ap |] a) b) 
-                                                   ([| segment $(stringE (nameBase conName)) >> return $(conE conName) |]
+                                                   ([| segment (pack $(stringE (nameBase conName))) >> return $(conE conName) |]
                                                    : (replicate nArgs [| fromPathSegments |]))
                funD 'fromPathSegments [clause [] (normalB body) []]
 
