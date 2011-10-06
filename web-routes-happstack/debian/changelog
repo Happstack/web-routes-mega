@@ -1,3 +1,9 @@
+haskell-web-routes-happstack (0.23.0) unstable; urgency=low
+
+  * Updated to web-routes 0.26.0
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Thu, 06 Oct 2011 14:29:47 -0500
+
 haskell-web-routes-happstack (0.22.2) unstable; urgency=low
 
   * in implSite_, re-escape '/' before calling runSite

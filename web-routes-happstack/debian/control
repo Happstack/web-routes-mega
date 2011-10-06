@@ -8,11 +8,15 @@ Build-Depends: debhelper (>= 7.0),
                cdbs,
                ghc (>= 6.8),
                ghc-prof,
+               libghc-bytestring-prof,
                libghc-happstack-server-prof,
-               libghc-web-routes-prof (>= 0.18)
+               libghc-text-prof,
+               libghc-web-routes-prof (>= 0.26)
 Build-Depends-Indep: ghc-doc,
                      haddock,
+                     libghc-bytestring-doc,
                      libghc-happstack-server-doc,
+                     libghc-web-routes-doc,
                      libghc-web-routes-doc (>= 0.18)
 Standards-Version: 3.8.1
 

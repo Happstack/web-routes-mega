@@ -3,9 +3,12 @@ module Web.Routes.Happstack where
 
 import Control.Applicative ((<$>))
 import Control.Monad (MonadPlus(mzero))
+import qualified Data.ByteString.Char8 as C
 import Data.List (intercalate)
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import Happstack.Server (Happstack, FilterMonad(..), ServerMonad(..), WebMonad(..), HasRqData(..), ServerPartT, Response, Request(rqPaths), ToMessage(..), dirs, seeOther)
-import Web.Routes.RouteT (RouteT(RouteT), ShowURL, URL, showURL, liftRouteT, mapRouteT)
+import Web.Routes.RouteT (RouteT(RouteT), MonadRoute, URL, showURL, liftRouteT, mapRouteT)
 import Web.Routes.Site (Site, runSite)
 
 instance (ServerMonad m) => ServerMonad (RouteT url m) where
@@ -33,8 +36,8 @@ instance (Happstack m) => Happstack (RouteT url m)
 --
 -- see also: 'implSite_'
 implSite :: (Functor m, Monad m, MonadPlus m, ServerMonad m) => 
-            String         -- ^ "http://example.org"
-         -> FilePath       -- ^ path to this handler, .e.g. "/route/" or ""
+            Text           -- ^ "http://example.org"
+         -> Text           -- ^ path to this handler, .e.g. "/route/" or ""
          -> Site url (m a) -- ^ the 'Site'
          -> m a
 implSite domain approot siteSpec =
@@ -50,17 +53,18 @@ implSite domain approot siteSpec =
 --
 -- see also: 'implSite'
 implSite_ :: (Functor m, Monad m, MonadPlus m, ServerMonad m) => 
-             String          -- ^ "http://example.org"
-          -> FilePath        -- ^ path to this handler, .e.g. "/route/" or ""
+             Text          -- ^ "http://example.org"
+          -> Text        -- ^ path to this handler, .e.g. "/route/" or ""
           -> Site url (m a)  -- ^ the 'Site'
           -> m (Either String a) 
 implSite_ domain approot siteSpec =
-    dirs approot $ do rq <- askRq
-                      let pathInfo = intercalate "/" (map escapeSlash (rqPaths rq))
-                          f        = runSite (domain ++ approot) siteSpec pathInfo
-                      case f of
-                        (Left parseError) -> return (Left parseError)
-                        (Right sp)   -> Right <$> (localRq (const $ rq { rqPaths = [] }) sp)
+    dirs (Text.unpack approot) $
+         do rq <- askRq
+            let pathInfo = intercalate "/" (map escapeSlash (rqPaths rq))
+                f        = runSite (domain `Text.append` approot) siteSpec (C.pack pathInfo)
+            case f of
+              (Left parseError) -> return (Left parseError)
+              (Right sp)   -> Right <$> (localRq (const $ rq { rqPaths = [] }) sp)
         where
           escapeSlash :: String -> String
           escapeSlash [] = []
@@ -78,7 +82,7 @@ implSite__ domain approot handleError siteSpec =
 -}
 
 -- | similar to 'seeOther' but takes a 'URL' 'm' as an argument
-seeOtherURL :: (ShowURL m, FilterMonad Response m) => URL m -> m Response
+seeOtherURL :: (MonadRoute m, FilterMonad Response m) => URL m -> m Response
 seeOtherURL url = 
     do otherURL <- showURL url
-       seeOther otherURL (toResponse "")
+       seeOther (Text.unpack otherURL) (toResponse "")
