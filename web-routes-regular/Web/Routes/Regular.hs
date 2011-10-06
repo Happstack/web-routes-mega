@@ -2,14 +2,14 @@
 module Web.Routes.Regular where
 
 import Control.Applicative hiding ((<|>))
-import Data.Char (toLower)
+import Data.Text (Text, pack, toLower)
 import Generics.Regular
 import Text.ParserCombinators.Parsec.Prim
 import Text.ParserCombinators.Parsec.Combinator
 import Web.Routes.PathInfo (PathInfo(fromPathSegments, toPathSegments), URLParser, segment)
 
 class GToURL f where
-   gtoPathSegments   :: f a -> [String]
+   gtoPathSegments   :: f a -> [Text]
    gfromPathSegments :: URLParser (f a)
 
 instance PathInfo a => GToURL (K a) where   
@@ -36,12 +36,9 @@ instance GToURL f => GToURL (S s f) where
    gtoPathSegments   (S x) = gtoPathSegments x
    gfromPathSegments       = S <$> gfromPathSegments
 
-lower :: String -> String
-lower = map toLower
-
 instance forall c f. (Constructor c, GToURL f) => GToURL (C c f) where
-   gtoPathSegments c@(C x)  = (lower $ conName c) : gtoPathSegments x
+   gtoPathSegments c@(C x)  = (toLower $ pack $ conName c) : gtoPathSegments x
    gfromPathSegments = 
      let constr = undefined :: C c f r
-     in do segment (lower $ conName constr) <|>  segment (conName constr)
+     in do segment (toLower $ pack $ conName constr) <|>  segment (pack $ conName constr)
            C <$> gfromPathSegments

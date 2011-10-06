@@ -1,5 +1,5 @@
 Name:             web-routes-regular
-Version:          0.18.2
+Version:          0.19.0
 License:          BSD3
 License-File:     LICENSE
 Author:           jeremy@seereason.com
@@ -12,7 +12,11 @@ Cabal-Version:    >= 1.6
 Build-type:       Simple
 
 Library
-        Build-Depends:    base >= 4 && < 5, parsec >= 2 && <4, regular, web-routes >= 0.18
+        Build-Depends:    base >= 4 && < 5, 
+                          parsec >= 2 && <4, 
+                          regular, 
+                          text,
+                          web-routes >= 0.26
         Exposed-Modules:  Web.Routes.Regular
 
 source-repository head
