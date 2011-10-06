@@ -1,3 +1,9 @@
+haskell-web-routes-hsp (0.22.0) unstable; urgency=low
+
+  * Updated to web-routes-0.26.0
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Wed, 05 Oct 2011 16:28:38 -0500
+
 haskell-web-routes-hsp (0.21.3) unstable; urgency=low
 
   * Added 'instance EmbedAsAttr (RouteT url m) (Attr String url)'

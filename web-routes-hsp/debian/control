@@ -10,13 +10,13 @@ Build-Depends: debhelper (>= 7.0),
                ghc-prof,
                libghc-hsp-prof,
                libghc-hsx-prof,
-               libghc-web-routes-prof (>= 0.23),
+               libghc-web-routes-prof (>= 0.26),
                libghc-text-prof
 Build-Depends-Indep: ghc-doc,
                      haddock,
                      libghc-hsp-doc,
                      libghc-hsx-doc,
-                     libghc-web-routes-doc (>= 0.23),
+                     libghc-web-routes-doc (>= 0.26),
                      libghc-text-doc
 Standards-Version: 3.8.1
 

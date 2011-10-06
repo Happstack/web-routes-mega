@@ -1,5 +1,5 @@
 Name:             web-routes-hsp
-Version:          0.21.3
+Version:          0.22.0
 License:          BSD3
 License-File:     LICENSE
 Author:           jeremy@seereason.com
@@ -11,7 +11,11 @@ Cabal-Version:    >= 1.6
 Build-type:       Simple
 
 Library
-        Build-Depends:    base >= 4 && < 5, hsx >= 0.7.0, hsp, web-routes >= 0.23, text
+        Build-Depends:    base >= 4 && < 5,
+                          hsx >= 0.7.0, 
+                          hsp, 
+                          text,
+                          web-routes >= 0.26
         Exposed-Modules:  Web.Routes.XMLGenT
 
 source-repository head
