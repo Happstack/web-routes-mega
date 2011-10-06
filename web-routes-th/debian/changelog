@@ -1,3 +1,9 @@
+haskell-web-routes-th (0.21.0) unstable; urgency=low
+
+  * Updated to web-routes-0.26
+
+ -- Jeremy Shaw <jeremy@seereason.com>  Thu, 06 Oct 2011 14:38:32 -0500
+
 haskell-web-routes-th (0.20.4) unstable; urgency=low
 
   * Bumped dependency on web-routes to >= 0.24.1
