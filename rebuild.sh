@@ -1,9 +1,11 @@
 #!/bin/sh
-sudo apt-get remove --purge libghc6-happstack-facebook-prof libghc6-happstack-facebook-dev libghc6-web-routes-mtl-prof libghc6-web-routes-mtl-dev libghc6-web-routes-hsp-prof libghc6-web-routes-hsp-dev libghc6-web-routes-happstack-prof libghc6-web-routes-happstack-dev libghc6-web-routes-prof libghc6-web-routes-dev
+sudo apt-get remove --purge libghc-happstack-facebook-prof libghc-happstack-facebook-dev libghc-web-routes-mtl-prof libghc-web-routes-mtl-dev libghc-web-routes-hsp-prof libghc-web-routes-hsp-dev libghc-web-routes-happstack-prof libghc-web-routes-happstack-dev libghc-web-routes-prof libghc-web-routes-dev
 
-cd web-routes && dpkg-buildpackage -b -us -uc -rfakeroot && sudo debi && cd .. && \
-cd web-routes-th && dpkg-buildpackage -b -us -uc -rfakeroot && sudo debi && cd .. && \
-cd web-routes-hsp && dpkg-buildpackage -b -us -uc -rfakeroot && sudo debi && cd .. && \
-cd web-routes-mtl && dpkg-buildpackage -b -us -uc -rfakeroot && sudo debi && cd .. && \
-cd web-routes-happstack && dpkg-buildpackage -b -us -uc -rfakeroot && sudo debi && cd ..
-# cd web-routes-wai && dpkg-buildpackage -b -us -uc -rfakeroot && sudo debi && cd ..
+for package in web-routes web-routes-th web-routes-hsp web-routes-happstack ; do
+ cd $package
+ echo "building $package..."
+ dpkg-buildpackage -b -us -uc -rfakeroot && sudo debi
+ cd ..
+done
+
+echo "rebuild.sh done."
