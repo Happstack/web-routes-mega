@@ -15,7 +15,7 @@ instance (ServerMonad m) => ServerMonad (RouteT url m) where
     askRq       = liftRouteT askRq
     localRq f m = mapRouteT (localRq f) m
 
-instance (FilterMonad a m)=> FilterMonad a (RouteT url m) where
+instance (FilterMonad a m) => FilterMonad a (RouteT url m) where
     setFilter     = liftRouteT . setFilter
     composeFilter = liftRouteT . composeFilter
     getFilter     = mapRouteT getFilter 
