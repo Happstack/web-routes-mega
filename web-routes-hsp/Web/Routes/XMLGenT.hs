@@ -10,9 +10,9 @@ import qualified HSX.XMLGenerator as HSX
 import Web.Routes.RouteT (RouteT, MonadRoute(..), showURL, URL)
 
 instance (Functor m, Monad m) => HSX.XMLGen (RouteT url m) where
-    type HSX.XML (RouteT url m) = XML
-    newtype HSX.Child (RouteT url m) = UChild { unUChild :: XML }
-    newtype HSX.Attribute (RouteT url m) = UAttr { unUAttr :: Attribute }
+    type XML (RouteT url m) = XML
+    newtype Child (RouteT url m) = UChild { unUChild :: XML }
+    newtype Attribute (RouteT url m) = UAttr { unUAttr :: Attribute }
 
     genElement n attrs children = 
         do attribs <- map unUAttr <$> asAttr attrs
