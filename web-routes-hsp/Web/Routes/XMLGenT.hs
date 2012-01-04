@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, TypeSynonymInstances, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE CPP, MultiParamTypeClasses, TypeSynonymInstances, FlexibleInstances, TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Web.Routes.XMLGenT where
 
@@ -10,10 +10,15 @@ import qualified HSX.XMLGenerator as HSX
 import Web.Routes.RouteT (RouteT, MonadRoute(..), showURL, URL)
 
 instance (Functor m, Monad m) => HSX.XMLGen (RouteT url m) where
+#if __GLASGOW_HASKELL__ < 702
+    type HSX.XML (RouteT url m) = XML
+    newtype HSX.Child (RouteT url m) = UChild { unUChild :: XML }
+    newtype HSX.Attribute (RouteT url m) = UAttr { unUAttr :: Attribute }
+#else
     type XML (RouteT url m) = XML
     newtype Child (RouteT url m) = UChild { unUChild :: XML }
     newtype Attribute (RouteT url m) = UAttr { unUAttr :: Attribute }
-
+#endif
     genElement n attrs children = 
         do attribs <- map unUAttr <$> asAttr attrs
            childer <- flattenCDATA . map unUChild <$> asChild children
