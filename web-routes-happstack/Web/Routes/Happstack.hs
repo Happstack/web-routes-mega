@@ -53,7 +53,7 @@ implSite domain approot siteSpec =
 --
 -- see also: 'implSite'
 implSite_ :: (Functor m, Monad m, MonadPlus m, ServerMonad m) => 
-             Text          -- ^ "http://example.org"
+             Text          -- ^ "http://example.org" (or "http://example.org:80")
           -> Text        -- ^ path to this handler, .e.g. "/route/" or ""
           -> Site url (m a)  -- ^ the 'Site'
           -> m (Either String a) 
