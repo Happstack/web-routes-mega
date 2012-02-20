@@ -5,7 +5,7 @@ import qualified Data.ByteString.Lazy.Char8 as L
 import Data.Text           (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import Data.Enumerator     (Iteratee)
+import Control.Monad.Trans.Resource (ResourceT)
 import Network.Wai         ( Application, Request, Response, rawPathInfo
                            , responseLBS)
 import Network.HTTP.Types  (status404)
@@ -57,7 +57,7 @@ handleWai approot handler = handleWai_ toPathInfoParams fromPathInfo approot han
 handleWaiRouteT_ :: (url -> [(Text, Maybe Text)] -> Text) -- ^ function to convert a 'url' + params into path info + query string
                  -> (S.ByteString -> Either String url)         -- ^ function to parse path info into 'url'
                  -> S.ByteString                                -- ^ app root
-                 -> (url -> Request -> RouteT url (Iteratee S.ByteString IO) Response) -- ^ routing function
+                 -> (url -> Request -> RouteT url (ResourceT IO) Response) -- ^ routing function
                  -> Application
 handleWaiRouteT_  toPathInfo fromPathInfo approot handler =
    handleWai_ toPathInfo fromPathInfo approot (\toPathInfo' url request -> unRouteT (handler url request) toPathInfo')
@@ -66,7 +66,7 @@ handleWaiRouteT_  toPathInfo fromPathInfo approot handler =
 -- | convert a 'RouteT' based routing function into an 'Application' using 'PathInfo' to do the url conversion
 handleWaiRouteT :: (PathInfo url) => 
                    S.ByteString  -- ^ app root
-                -> (url -> Request -> RouteT url (Iteratee S.ByteString IO) Response) -- ^ routing function
+                -> (url -> Request -> RouteT url (ResourceT IO) Response) -- ^ routing function
                 -> Application
 handleWaiRouteT approot handler = handleWaiRouteT_ toPathInfoParams fromPathInfo approot handler
 
