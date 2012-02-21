@@ -60,8 +60,7 @@ implSite_ :: (Functor m, Monad m, MonadPlus m, ServerMonad m) =>
 implSite_ domain approot siteSpec =
     dirs (Text.unpack approot) $
          do rq <- askRq
-            let pathInfo = intercalate "/" (map escapeSlash (rqPaths rq))
-                f        = runSite (domain `Text.append` approot) siteSpec (C.pack pathInfo)
+            let f        = runSite (domain `Text.append` approot) siteSpec (map Text.pack $ rqPaths rq)
             case f of
               (Left parseError) -> return (Left parseError)
               (Right sp)   -> Right <$> (localRq (const $ rq { rqPaths = [] }) sp)
