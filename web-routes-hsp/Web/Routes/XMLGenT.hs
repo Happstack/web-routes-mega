@@ -19,7 +19,7 @@ instance (Functor m, Monad m) => HSX.XMLGen (RouteT url m) where
     newtype Child (RouteT url m) = UChild { unUChild :: XML }
     newtype Attribute (RouteT url m) = UAttr { unUAttr :: Attribute }
 #endif
-    genElement n attrs children = 
+    genElement n attrs children =
         do attribs <- map unUAttr <$> asAttr attrs
            childer <- flattenCDATA . map unUChild <$> asChild children
            HSX.XMLGenT $ return (Element
@@ -28,14 +28,14 @@ instance (Functor m, Monad m) => HSX.XMLGen (RouteT url m) where
                               childer
                              )
     xmlToChild = UChild
-    pcdataToChild = HSX.xmlToChild . pcdata                                                           
+    pcdataToChild = HSX.xmlToChild . pcdata
 
 flattenCDATA :: [XML] -> [XML]
-flattenCDATA cxml = 
+flattenCDATA cxml =
                 case flP cxml [] of
                  [] -> []
                  [CDATA _ ""] -> []
-                 xs -> xs                       
+                 xs -> xs
     where
         flP :: [XML] -> [XML] -> [XML]
         flP [] bs = reverse bs
@@ -51,7 +51,7 @@ instance (Monad m, Functor m) => IsAttrValue (RouteT url m) TL.Text where
     toAttrValue = toAttrValue . TL.unpack
 
 instance (Functor m, Monad m) => HSX.EmbedAsAttr (RouteT url m) Attribute where
-    asAttr = return . (:[]) . UAttr 
+    asAttr = return . (:[]) . UAttr
 
 instance (Functor m, Monad m) => HSX.EmbedAsAttr (RouteT url m) (Attr String Char) where
     asAttr (n := c)  = asAttr (n := [c])
@@ -66,6 +66,9 @@ instance (Functor m, Monad m) => HSX.EmbedAsAttr (RouteT url m) (Attr String Boo
 instance (Functor m, Monad m) => HSX.EmbedAsAttr (RouteT url m) (Attr String Int) where
     asAttr (n := i)  = asAttr $ MkAttr (toName n, pAttrVal (show i))
 
+instance (Functor m, Monad m) => HSX.EmbedAsAttr (RouteT url m) (Attr String Integer) where
+    asAttr (n := i)  = asAttr $ MkAttr (toName n, pAttrVal (show i))
+
 instance (Monad m, Functor m, IsName n) => (EmbedAsAttr (RouteT url m) (Attr n TL.Text)) where
     asAttr (n := a) = asAttr $ MkAttr (toName n, pAttrVal $ TL.unpack a)
 
@@ -73,7 +76,7 @@ instance (Monad m, Functor m, IsName n) => (EmbedAsAttr (RouteT url m) (Attr n T
     asAttr (n := a) = asAttr $ MkAttr (toName n, pAttrVal $ T.unpack a)
 
 instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr String url) where
-    asAttr (n := u) = 
+    asAttr (n := u) =
         do url <- showURL u
            asAttr $ MkAttr (toName n, pAttrVal (T.unpack url))
 

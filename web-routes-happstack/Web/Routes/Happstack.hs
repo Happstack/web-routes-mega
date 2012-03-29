@@ -64,11 +64,6 @@ implSite_ domain approot siteSpec =
             case f of
               (Left parseError) -> return (Left parseError)
               (Right sp)   -> Right <$> (localRq (const $ rq { rqPaths = [] }) sp)
-        where
-          escapeSlash :: String -> String
-          escapeSlash [] = []
-          escapeSlash ('/':cs) = "%2F" ++ escapeSlash cs
-          escapeSlash (c:cs)   = c : escapeSlash cs
 {- 
 implSite__ :: (Monad m) => String -> FilePath -> ([ErrorMsg] -> ServerPartT m a) -> Site url (ServerPartT m a) -> (ServerPartT m a)
 implSite__ domain approot handleError siteSpec =
