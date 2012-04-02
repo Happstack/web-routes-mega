@@ -1,5 +1,5 @@
 Name:             web-routes-wai
-Version:          0.22.0
+Version:          0.22.1
 License:          BSD3
 License-File:     LICENSE
 Author:           jeremy@seereason.com
@@ -18,7 +18,7 @@ Library
                           http-types  == 0.6.*,
                           text        == 0.11.*,
                           wai         == 1.1.*,
-                          web-routes  == 0.26.*
+                          web-routes  == 0.27.*
         Exposed-Modules:  Web.Routes.Wai
 
 source-repository head
