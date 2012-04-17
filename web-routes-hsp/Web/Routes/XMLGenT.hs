@@ -6,29 +6,23 @@ import HSP
 import Control.Applicative ((<$>))
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import qualified HSX.XMLGenerator as HSX
+import {- qualified -} HSX.XMLGenerator -- as HSX
 import Web.Routes.RouteT (RouteT, MonadRoute(..), showURL, URL)
 
-instance (Functor m, Monad m) => HSX.XMLGen (RouteT url m) where
-#if __GLASGOW_HASKELL__ < 702
-    type HSX.XML (RouteT url m) = XML
-    newtype HSX.Child (RouteT url m) = UChild { unUChild :: XML }
-    newtype HSX.Attribute (RouteT url m) = UAttr { unUAttr :: Attribute }
-#else
-    type XML (RouteT url m) = XML
-    newtype Child (RouteT url m) = UChild { unUChild :: XML }
-    newtype Attribute (RouteT url m) = UAttr { unUAttr :: Attribute }
-#endif
+instance (Functor m, Monad m) => XMLGen (RouteT url m) where
+    type XMLType (RouteT url m) = XML
+    newtype ChildType (RouteT url m) = UChild { unUChild :: XML }
+    newtype AttributeType (RouteT url m) = UAttr { unUAttr :: Attribute }
     genElement n attrs children =
         do attribs <- map unUAttr <$> asAttr attrs
            childer <- flattenCDATA . map unUChild <$> asChild children
-           HSX.XMLGenT $ return (Element
+           return (Element
                               (toName n)
                               attribs
                               childer
                              )
     xmlToChild = UChild
-    pcdataToChild = HSX.xmlToChild . pcdata
+    pcdataToChild = xmlToChild . pcdata
 
 flattenCDATA :: [XML] -> [XML]
 flattenCDATA cxml =
@@ -50,23 +44,23 @@ instance (Monad m, Functor m) => IsAttrValue (RouteT url m) T.Text where
 instance (Monad m, Functor m) => IsAttrValue (RouteT url m) TL.Text where
     toAttrValue = toAttrValue . TL.unpack
 
-instance (Functor m, Monad m) => HSX.EmbedAsAttr (RouteT url m) Attribute where
+instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) Attribute where
     asAttr = return . (:[]) . UAttr
 
-instance (Functor m, Monad m) => HSX.EmbedAsAttr (RouteT url m) (Attr String Char) where
+instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr String Char) where
     asAttr (n := c)  = asAttr (n := [c])
 
-instance (Functor m, Monad m) => HSX.EmbedAsAttr (RouteT url m) (Attr String String) where
+instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr String String) where
     asAttr (n := str)  = asAttr $ MkAttr (toName n, pAttrVal str)
 
-instance (Functor m, Monad m) => HSX.EmbedAsAttr (RouteT url m) (Attr String Bool) where
+instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr String Bool) where
     asAttr (n := True)  = asAttr $ MkAttr (toName n, pAttrVal "true")
     asAttr (n := False) = asAttr $ MkAttr (toName n, pAttrVal "false")
 
-instance (Functor m, Monad m) => HSX.EmbedAsAttr (RouteT url m) (Attr String Int) where
+instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr String Int) where
     asAttr (n := i)  = asAttr $ MkAttr (toName n, pAttrVal (show i))
 
-instance (Functor m, Monad m) => HSX.EmbedAsAttr (RouteT url m) (Attr String Integer) where
+instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr String Integer) where
     asAttr (n := i)  = asAttr $ MkAttr (toName n, pAttrVal (show i))
 
 instance (Monad m, Functor m, IsName n) => (EmbedAsAttr (RouteT url m) (Attr n TL.Text)) where
@@ -116,4 +110,4 @@ instance (Functor m, Monad m) => XMLGenerator (RouteT url m)
 
 instance (MonadRoute m) => MonadRoute (XMLGenT m) where
     type URL (XMLGenT m) = URL m
-    askRouteFn = XMLGenT $ askRouteFn
+    askRouteFn = XMLGenT askRouteFn
