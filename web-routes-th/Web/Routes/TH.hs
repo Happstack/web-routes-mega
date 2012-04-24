@@ -2,9 +2,11 @@
 {- OPTIONS_GHC -optP-include -optPdist/build/autogen/cabal_macros.h -}
 module Web.Routes.TH where
 
-import Control.Monad (ap, replicateM)
-import Data.List (intercalate)
-import Data.Text (pack, unpack)
+import Control.Monad                 (ap, replicateM)
+import Data.Char                     (isUpper, toLower, toUpper)
+import Data.List                     (intercalate)
+import Data.List.Split               (split, dropInitBlank, keepDelimsL, whenElt, splitOn)
+import Data.Text                     (pack, unpack)
 import Language.Haskell.TH
 import Text.ParserCombinators.Parsec ((<|>),many1)
 import Web.Routes.PathInfo
@@ -34,7 +36,7 @@ derivePathInfo name
                let body = caseE (varE inp) $
                             [ do args <- replicateM nArgs (newName "arg")
                                  let matchCon = conP conName (map varP args)
-                                     conStr = (nameBase conName)
+                                     conStr = prettify (nameBase conName)
                                  match matchCon (normalB (toURLWork conStr args)) []
                                   |  (conName, nArgs) <- cons ]
                    toURLWork :: String -> [Name] -> ExpQ
@@ -48,7 +50,7 @@ derivePathInfo name
                             | (conName, nArgs) <- cons])
                    parseCon :: Name -> Int -> ExpQ
                    parseCon conName nArgs = foldl1 (\a b -> appE (appE [| ap |] a) b)
-                                                   ([| segment (pack $(stringE (nameBase conName))) >> return $(conE conName) |]
+                                                   ([| segment (pack $(stringE (verbatimize $ nameBase conName))) >> return $(conE conName) |]
                                                    : (replicate nArgs [| fromPathSegments |]))
                funD 'fromPathSegments [clause [] (normalB body) []]
 
@@ -74,3 +76,13 @@ parseInfo name
 #else
           conv = id
 #endif
+
+prettify :: String -> String
+prettify =
+    intercalate "-" . map (map toLower) . split splitter
+  where
+    splitter = dropInitBlank . keepDelimsL . whenElt $ isUpper
+
+verbatimize :: String -> String
+verbatimize =
+    concat . map (\(x:xs) -> toUpper x : xs) . splitOn "-"
