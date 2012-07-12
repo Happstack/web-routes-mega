@@ -1,19 +1,47 @@
 {-# LANGUAGE CPP, TemplateHaskell #-}
 {- OPTIONS_GHC -optP-include -optPdist/build/autogen/cabal_macros.h -}
-module Web.Routes.TH where
+module Web.Routes.TH
+     ( derivePathInfo
+     , derivePathInfo'
+     , standard
+     ) where
 
 import Control.Monad                 (ap, replicateM)
 import Data.Char                     (isUpper, toLower, toUpper)
 import Data.List                     (intercalate)
-import Data.List.Split               (split, dropInitBlank, keepDelimsL, whenElt, splitOn)
+import Data.List.Split               (split, dropInitBlank, keepDelimsL, whenElt)
 import Data.Text                     (pack, unpack)
 import Language.Haskell.TH
 import Text.ParserCombinators.Parsec ((<|>),many1)
 import Web.Routes.PathInfo
 
+-- | use Template Haskell to create 'PathInfo' instances for a type.
+--
+-- > $(derivePathInfo ''SiteURL)
+--
+-- Uses the 'standard' formatter by default.
+derivePathInfo :: Name
+               -> Q [Dec]
+derivePathInfo = derivePathInfo' standard
+
 -- FIXME: handle when called with a type (not data, newtype)
-derivePathInfo :: Name -> Q [Dec]
-derivePathInfo name
+
+-- | use Template Haskell to create 'PathInfo' instances for a type.
+--
+-- This variant allows the user to supply a function that transforms
+-- the constructor name to a prettier rendering. It is important that
+-- the transformation function generates a unique output for each
+-- input. For example, simply converting the string to all lower case
+-- is not acceptable, because then 'FooBar' and 'Foobar' would be
+-- indistinguishable.
+--
+-- > $(derivePathInfo' standard ''SiteURL)
+--
+-- see also: 'standard'
+derivePathInfo' :: (String -> String)
+                -> Name
+                -> Q [Dec]
+derivePathInfo' formatter name
     = do c <- parseInfo name
          case c of
            Tagged cons cx keys ->
@@ -36,7 +64,7 @@ derivePathInfo name
                let body = caseE (varE inp) $
                             [ do args <- replicateM nArgs (newName "arg")
                                  let matchCon = conP conName (map varP args)
-                                     conStr = prettify (nameBase conName)
+                                     conStr = formatter (nameBase conName)
                                  match matchCon (normalB (toURLWork conStr args)) []
                                   |  (conName, nArgs) <- cons ]
                    toURLWork :: String -> [Name] -> ExpQ
@@ -50,7 +78,7 @@ derivePathInfo name
                             | (conName, nArgs) <- cons])
                    parseCon :: Name -> Int -> ExpQ
                    parseCon conName nArgs = foldl1 (\a b -> appE (appE [| ap |] a) b)
-                                                   ([| segment (pack $(stringE (verbatimize $ nameBase conName))) >> return $(conE conName) |]
+                                                   ([| segment (pack $(stringE (formatter $ nameBase conName))) >> return $(conE conName) |]
                                                    : (replicate nArgs [| fromPathSegments |]))
                funD 'fromPathSegments [clause [] (normalB body) []]
 
@@ -77,12 +105,13 @@ parseInfo name
           conv = id
 #endif
 
-prettify :: String -> String
-prettify =
+-- | the standard formatter
+--
+-- Converts @CamelCase@ to @camel-case@.
+--
+-- see also: 'derivePathInfo' and 'derivePathInfo''
+standard :: String -> String
+standard =
     intercalate "-" . map (map toLower) . split splitter
   where
     splitter = dropInitBlank . keepDelimsL . whenElt $ isUpper
-
-verbatimize :: String -> String
-verbatimize =
-    concat . map (\(x:xs) -> toUpper x : xs) . splitOn "-"

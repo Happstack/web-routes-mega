@@ -1,5 +1,5 @@
 Name:             web-routes-th
-Version:          0.21.1
+Version:          0.22.0
 License:          BSD3
 License-File:     LICENSE
 Author:           jeremy@seereason.com
@@ -18,7 +18,6 @@ Library
                           split,
                           web-routes >= 0.26
         Exposed-Modules:  Web.Routes.TH
-                          Web.Routes.TH.Old
 
 source-repository head
     type:     darcs
