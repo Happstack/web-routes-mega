@@ -17,6 +17,7 @@ Library
                           text,
                           web-routes >= 0.26
         Exposed-Modules:  Web.Routes.TH
+                          Web.Routes.TH.Old
 
 source-repository head
     type:     darcs
