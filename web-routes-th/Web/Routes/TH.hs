@@ -4,16 +4,21 @@ module Web.Routes.TH
      ( derivePathInfo
      , derivePathInfo'
      , standard
+     , mkRoute
      ) where
 
+import Control.Applicative           ((<$>))
 import Control.Monad                 (ap, replicateM)
 import Data.Char                     (isUpper, toLower, toUpper)
-import Data.List                     (intercalate)
+import Data.List                     (intercalate, foldl')
 import Data.List.Split               (split, dropInitBlank, keepDelimsL, whenElt)
 import Data.Text                     (pack, unpack)
 import Language.Haskell.TH
+import Language.Haskell.TH.Syntax    (nameBase)
 import Text.ParserCombinators.Parsec ((<|>),many1)
 import Web.Routes.PathInfo
+
+#include "/home/stepcut/n-heptane/projects/haskell/web-routes/web-routes-th/dist/build/autogen/cabal_macros.h"
 
 -- | use Template Haskell to create 'PathInfo' instances for a type.
 --
@@ -57,7 +62,6 @@ derivePathInfo' formatter name
 #else
       mkCtx = mkType
 #endif
-
       toPathSegmentsFn :: [(Name, Int)] -> DecQ
       toPathSegmentsFn cons
           = do inp <- newName "inp"
@@ -115,3 +119,58 @@ standard =
     intercalate "-" . map (map toLower) . split splitter
   where
     splitter = dropInitBlank . keepDelimsL . whenElt $ isUpper
+
+mkRoute :: Name -> Q [Dec]
+mkRoute url =
+    do (Tagged cons _ _) <- parseInfo url
+       fn <- funD (mkName "route") $
+               map (\(con, numArgs) ->
+                        do -- methods <- parseMethods con
+                           -- runIO $ print methods
+                           args <- replicateM numArgs (newName "arg")
+                           clause [conP con $ map varP args] (normalB $ foldl' appE (varE (mkName (headLower (nameBase con)))) (map varE args)) []
+                   ) cons
+       return [fn]
+    where
+      headLower :: String -> String
+      headLower (c:cs) = toLower c : cs
+
+-- work in progress
+
+parseMethods :: Name -> Q [Name]
+parseMethods con =
+    do info <- reify con
+       case info of
+         (DataConI _ ty _ _) ->
+             do runIO $ print ty
+                runIO $ print $ lastTerm ty
+                return $ extractMethods (lastTerm ty)
+
+extractMethods :: Type -> [Name]
+extractMethods ty =
+    case ty of
+      (AppT (ConT con) (ConT method)) ->
+          [method]
+      (AppT (ConT con) methods) ->
+          extractMethods' methods
+        where
+          extractMethods' :: Type -> [Name]
+          extractMethods' t = map (\(ConT n) -> n) (leafs t)
+
+-- | return the 'Type' after the right-most @->@. Or the original 'Type' if there are no @->@.
+lastTerm :: Type -> Type
+lastTerm t@(AppT l r)
+    | hasArrowT l = lastTerm r
+    | otherwise   = t
+lastTerm t = t
+
+-- | tests if a 'Type' contains an 'ArrowT' somewhere
+hasArrowT :: Type -> Bool
+hasArrowT ArrowT     = True
+hasArrowT (AppT l r) = hasArrowT l || hasArrowT r
+hasArrowT _          = False
+
+leafs :: Type -> [Type]
+leafs (AppT l@(AppT _ _) r) = leafs l ++ leafs r
+leafs (AppT _ r) = leafs r
+leafs t          = [t]
