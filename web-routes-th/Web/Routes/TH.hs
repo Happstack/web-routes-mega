@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP, TemplateHaskell #-}
-{- OPTIONS_GHC -optP-include -optPdist/build/autogen/cabal_macros.h -}
 module Web.Routes.TH
      ( derivePathInfo
      , derivePathInfo'
@@ -17,8 +16,6 @@ import Language.Haskell.TH
 import Language.Haskell.TH.Syntax    (nameBase)
 import Text.ParserCombinators.Parsec ((<|>),many1)
 import Web.Routes.PathInfo
-
-#include "/home/stepcut/n-heptane/projects/haskell/web-routes/web-routes-th/dist/build/autogen/cabal_macros.h"
 
 -- | use Template Haskell to create 'PathInfo' instances for a type.
 --
