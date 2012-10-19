@@ -1,5 +1,5 @@
 Name:             web-routes-happstack
-Version:          0.23.3
+Version:          0.23.4
 License:          BSD3
 License-File:     LICENSE
 Author:           jeremy@seereason.com
@@ -12,8 +12,8 @@ Build-type:       Simple
 
 Library
         Build-Depends:    base             >= 4 && < 5,
-                          bytestring       == 0.9.*,
-                          happstack-server >= 6.6 && <7.1,
+                          bytestring       >= 0.9 && < 0.11,
+                          happstack-server >= 6.6 && <7.2,
                           text             == 0.11.*,
                           web-routes       >= 0.27.1
         Exposed-Modules:  Web.Routes.Happstack
