@@ -18,7 +18,7 @@ instance (ServerMonad m) => ServerMonad (RouteT url m) where
 instance (FilterMonad a m) => FilterMonad a (RouteT url m) where
     setFilter     = liftRouteT . setFilter
     composeFilter = liftRouteT . composeFilter
-    getFilter     = mapRouteT getFilter 
+    getFilter     = mapRouteT getFilter
 
 instance (WebMonad a m) => WebMonad a (RouteT url m) where
     finishWith = liftRouteT . finishWith
@@ -35,7 +35,7 @@ instance (Happstack m) => Happstack (RouteT url m)
 -- calls 'mzero' if the route can be decoded.
 --
 -- see also: 'implSite_'
-implSite :: (Functor m, Monad m, MonadPlus m, ServerMonad m) => 
+implSite :: (Functor m, Monad m, MonadPlus m, ServerMonad m) =>
             Text           -- ^ "http://example.org"
          -> Text           -- ^ path to this handler, .e.g. "/route/" or ""
          -> Site url (m a) -- ^ the 'Site'
@@ -52,11 +52,11 @@ implSite domain approot siteSpec =
 -- otherwise @Right a@.
 --
 -- see also: 'implSite'
-implSite_ :: (Functor m, Monad m, MonadPlus m, ServerMonad m) => 
+implSite_ :: (Functor m, Monad m, MonadPlus m, ServerMonad m) =>
              Text          -- ^ "http://example.org" (or "http://example.org:80")
           -> Text        -- ^ path to this handler, .e.g. "/route/" or ""
           -> Site url (m a)  -- ^ the 'Site'
-          -> m (Either String a) 
+          -> m (Either String a)
 implSite_ domain approot siteSpec =
     dirs (Text.unpack approot) $
          do rq <- askRq
@@ -64,7 +64,7 @@ implSite_ domain approot siteSpec =
             case f of
               (Left parseError) -> return (Left parseError)
               (Right sp)   -> Right <$> (localRq (const $ rq { rqPaths = [] }) sp)
-{- 
+{-
 implSite__ :: (Monad m) => String -> FilePath -> ([ErrorMsg] -> ServerPartT m a) -> Site url (ServerPartT m a) -> (ServerPartT m a)
 implSite__ domain approot handleError siteSpec =
     dirs approot $ do rq <- askRq
@@ -77,6 +77,6 @@ implSite__ domain approot handleError siteSpec =
 
 -- | similar to 'seeOther' but takes a 'URL' 'm' as an argument
 seeOtherURL :: (MonadRoute m, FilterMonad Response m) => URL m -> m Response
-seeOtherURL url = 
+seeOtherURL url =
     do otherURL <- showURL url
        seeOther (Text.unpack otherURL) (toResponse "")
