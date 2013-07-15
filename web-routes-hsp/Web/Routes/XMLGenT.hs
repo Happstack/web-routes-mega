@@ -1,16 +1,17 @@
-{-# LANGUAGE CPP, MultiParamTypeClasses, TypeSynonymInstances, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE CPP, MultiParamTypeClasses, TypeSynonymInstances, FlexibleContexts, FlexibleInstances, TypeFamilies, OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Web.Routes.XMLGenT where
 
-import HSP
 import Control.Applicative ((<$>))
+import Data.Monoid ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import {- qualified -} HSX.XMLGenerator -- as HSX
+import HSP
 import Web.Routes.RouteT (RouteT, MonadRoute(..), showURL, URL)
 
 instance (Functor m, Monad m) => XMLGen (RouteT url m) where
-    type XMLType (RouteT url m) = XML
+    type XMLType (RouteT url m)    = XML
+    type StringType (RouteT url m) = TL.Text
     newtype ChildType (RouteT url m) = UChild { unUChild :: XML }
     newtype AttributeType (RouteT url m) = UAttr { unUAttr :: Attribute }
     genElement n attrs children =
@@ -35,56 +36,56 @@ flattenCDATA cxml =
         flP [] bs = reverse bs
         flP [x] bs = reverse (x:bs)
         flP (x:y:xs) bs = case (x,y) of
-                           (CDATA e1 s1, CDATA e2 s2) | e1 == e2 -> flP (CDATA e1 (s1++s2) : xs) bs
+                           (CDATA e1 s1, CDATA e2 s2) | e1 == e2 -> flP (CDATA e1 (s1<>s2) : xs) bs
                            _ -> flP (y:xs) (x:bs)
-
+{-
 instance (Monad m, Functor m) => IsAttrValue (RouteT url m) T.Text where
     toAttrValue = toAttrValue . T.unpack
 
 instance (Monad m, Functor m) => IsAttrValue (RouteT url m) TL.Text where
     toAttrValue = toAttrValue . TL.unpack
-
+-}
 instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) Attribute where
     asAttr = return . (:[]) . UAttr
 
 instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr String Char) where
-    asAttr (n := c)  = asAttr (n := [c])
+    asAttr (n := c)  = asAttr (TL.pack n := TL.singleton c)
 
 instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr String String) where
-    asAttr (n := str)  = asAttr $ MkAttr (toName n, pAttrVal str)
+    asAttr (n := str)  = asAttr $ MkAttr (toName $ TL.pack n, pAttrVal $ TL.pack str)
 
-instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr String Bool) where
+instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr TL.Text Bool) where
     asAttr (n := True)  = asAttr $ MkAttr (toName n, pAttrVal "true")
     asAttr (n := False) = asAttr $ MkAttr (toName n, pAttrVal "false")
 
-instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr String Int) where
-    asAttr (n := i)  = asAttr $ MkAttr (toName n, pAttrVal (show i))
+instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr TL.Text Int) where
+    asAttr (n := i)  = asAttr $ MkAttr (toName n, pAttrVal (TL.pack $ show i))
 
-instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr String Integer) where
-    asAttr (n := i)  = asAttr $ MkAttr (toName n, pAttrVal (show i))
+instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr TL.Text Integer) where
+    asAttr (n := i)  = asAttr $ MkAttr (toName n, pAttrVal (TL.pack $ show i))
 
-instance (Monad m, Functor m, IsName n) => (EmbedAsAttr (RouteT url m) (Attr n TL.Text)) where
-    asAttr (n := a) = asAttr $ MkAttr (toName n, pAttrVal $ TL.unpack a)
+instance (Monad m, Functor m, IsName n TL.Text) => (EmbedAsAttr (RouteT url m) (Attr n TL.Text)) where
+    asAttr (n := a) = asAttr $ MkAttr (toName n, pAttrVal a)
 
-instance (Monad m, Functor m, IsName n) => (EmbedAsAttr (RouteT url m) (Attr n T.Text)) where
-    asAttr (n := a) = asAttr $ MkAttr (toName n, pAttrVal $ T.unpack a)
+instance (Monad m, Functor m, IsName n TL.Text) => (EmbedAsAttr (RouteT url m) (Attr n T.Text)) where
+    asAttr (n := a) = asAttr $ MkAttr (toName n, pAttrVal $ TL.fromStrict a)
 
-instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr String url) where
+instance (Functor m, Monad m) => EmbedAsAttr (RouteT url m) (Attr TL.Text url) where
     asAttr (n := u) =
         do url <- showURL u
-           asAttr $ MkAttr (toName n, pAttrVal (T.unpack url))
+           asAttr $ MkAttr (toName n, pAttrVal (TL.fromStrict url))
 
 instance (Functor m, Monad m) => EmbedAsChild (RouteT url m) Char where
-    asChild = XMLGenT . return . (:[]) . UChild . pcdata . (:[])
+    asChild = XMLGenT . return . (:[]) . UChild . pcdata . TL.singleton
 
 instance (Functor m, Monad m) => EmbedAsChild (RouteT url m) String where
-    asChild = XMLGenT . return . (:[]) . UChild . pcdata
+    asChild = XMLGenT . return . (:[]) . UChild . pcdata . TL.pack
 
 instance (Monad m, Functor m) => (EmbedAsChild (RouteT url m) TL.Text) where
-    asChild = asChild . TL.unpack
+    asChild = XMLGenT . return . (:[]) . UChild . pcdata
 
 instance (Monad m, Functor m) => (EmbedAsChild (RouteT url m) T.Text) where
-    asChild = asChild . T.unpack
+    asChild = asChild . TL.fromStrict
 
 instance (Functor m, Monad m) => EmbedAsChild (RouteT url m) XML where
     asChild = XMLGenT . return . (:[]) . UChild
