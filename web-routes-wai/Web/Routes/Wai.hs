@@ -45,7 +45,7 @@ handleWai_ fromUrl toUrl approot handler =
 
 -- | function to convert a routing function into an Application by
 -- leveraging 'PathInfo' to do the url conversion
-handleWai :: (PathInfo url) => 
+handleWai :: (PathInfo url) =>
              S.ByteString -- ^ approot
           -> ((url -> [(Text, Maybe Text)] -> Text) -> url -> Application) -- ^ routing function
           -> Application
@@ -57,16 +57,15 @@ handleWai approot handler = handleWai_ toPathInfoParams fromPathInfo approot han
 handleWaiRouteT_ :: (url -> [(Text, Maybe Text)] -> Text) -- ^ function to convert a 'url' + params into path info + query string
                  -> (S.ByteString -> Either String url)         -- ^ function to parse path info into 'url'
                  -> S.ByteString                                -- ^ app root
-                 -> (url -> Request -> RouteT url (ResourceT IO) Response) -- ^ routing function
+                 -> (url -> Request -> RouteT url IO Response) -- ^ routing function
                  -> Application
 handleWaiRouteT_  toPathInfo fromPathInfo approot handler =
    handleWai_ toPathInfo fromPathInfo approot (\toPathInfo' url request -> unRouteT (handler url request) toPathInfo')
 
-
 -- | convert a 'RouteT' based routing function into an 'Application' using 'PathInfo' to do the url conversion
-handleWaiRouteT :: (PathInfo url) => 
+handleWaiRouteT :: (PathInfo url) =>
                    S.ByteString  -- ^ app root
-                -> (url -> Request -> RouteT url (ResourceT IO) Response) -- ^ routing function
+                -> (url -> Request -> RouteT url IO Response) -- ^ routing function
                 -> Application
 handleWaiRouteT approot handler = handleWaiRouteT_ toPathInfoParams fromPathInfo approot handler
 
@@ -74,7 +73,7 @@ handleWaiRouteT approot handler = handleWaiRouteT_ toPathInfoParams fromPathInfo
 waiSite :: Site url Application -- ^ Site
         -> S.ByteString               -- ^ approot, e.g. http://www.example.org/app
         -> Application
-waiSite site approot = handleWai_ formatURL (parsePathSegments site . decodePathInfo) approot (handleSite site) 
+waiSite site approot = handleWai_ formatURL (parsePathSegments site . decodePathInfo) approot (handleSite site)
     where
       formatURL url params =
           let (paths, moreParams) = formatPathSegments site url
