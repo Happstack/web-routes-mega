@@ -5,7 +5,6 @@ import qualified Data.ByteString.Lazy.Char8 as L
 import Data.Text           (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import Control.Monad.Trans.Resource (ResourceT)
 import Network.Wai         ( Application, Request, Response, rawPathInfo
                            , responseLBS)
 import Network.HTTP.Types  (status404)
