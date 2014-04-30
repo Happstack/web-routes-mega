@@ -94,7 +94,7 @@ parseInfo name
          case info of
            TyConI (DataD cx _ keys cs _)    -> return $ Tagged (map conInfo cs) cx $ map conv keys
            TyConI (NewtypeD cx _ keys con _)-> return $ Tagged [conInfo con] cx $ map conv keys
-           _                            -> error "Invalid input"
+           _                                ->  error $ "derivePathInfo - invalid input: " ++ pprint info
     where conInfo (NormalC n args) = (n, length args)
           conInfo (RecC n args) = (n, length args)
           conInfo (InfixC _ n _) = (n, 2)
