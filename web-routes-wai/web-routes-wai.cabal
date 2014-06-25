@@ -1,5 +1,5 @@
 Name:             web-routes-wai
-Version:          0.23.2
+Version:          0.24.0
 License:          BSD3
 License-File:     LICENSE
 Author:           jeremy@seereason.com
@@ -16,7 +16,7 @@ Library
                           bytestring  >= 0.9  && < 0.11,
                           http-types  >= 0.6  && < 0.9,
                           text        >= 0.11 && < 1.2,
-                          wai         >= 2.0  && < 2.2,
+                          wai         >= 3.0  && < 3.1,
                           web-routes  >= 0.27 && < 0.28
         Exposed-Modules:  Web.Routes.Wai
 

@@ -22,11 +22,11 @@ handleWaiError :: (url -> [(Text, Maybe Text)] -> Text) -- ^ function to convert
                -> ((url -> [(Text, Maybe Text)] -> Text) -> url -> Application)  -- ^ routing function
                -> Application
 handleWaiError fromUrl toUrl approot handleError handler =
-  \request ->
+  \request respond ->
      do let fUrl = toUrl $ stripOverlapBS approot $ rawPathInfo request
         case fUrl of
-          (Left parseError) -> handleError parseError request
-          (Right url)  -> handler (\url params -> (Text.decodeUtf8 approot) `Text.append` (fromUrl url params)) url request
+          (Left parseError) -> handleError parseError request respond
+          (Right url)       -> handler (\url params -> (Text.decodeUtf8 approot) `Text.append` (fromUrl url params)) url request respond
 
 -- | a low-level function for convert a parser, printer, and routing function into an 'Application'
 --
@@ -40,7 +40,7 @@ handleWai_ fromUrl toUrl approot handler =
     handleWaiError fromUrl toUrl approot handleError handler
     where
       handleError :: String -> Application
-      handleError parseError = \_request -> return $ responseLBS status404 [] (L.pack parseError)
+      handleError parseError _request respond = respond $ responseLBS status404 [] (L.pack parseError)
 
 -- | function to convert a routing function into an Application by
 -- leveraging 'PathInfo' to do the url conversion
@@ -53,13 +53,13 @@ handleWai approot handler = handleWai_ toPathInfoParams fromPathInfo approot han
 -- | a function to convert a parser, printer and routing function into an 'Application'.
 --
 -- This is similar to 'handleWai_' expect that it expects the routing function to use 'RouteT'.
-handleWaiRouteT_ :: (url -> [(Text, Maybe Text)] -> Text) -- ^ function to convert a 'url' + params into path info + query string
-                 -> (S.ByteString -> Either String url)         -- ^ function to parse path info into 'url'
-                 -> S.ByteString                                -- ^ app root
+handleWaiRouteT_ :: (url -> [(Text, Maybe Text)] -> Text)      -- ^ function to convert a 'url' + params into path info + query string
+                 -> (S.ByteString -> Either String url)        -- ^ function to parse path info into 'url'
+                 -> S.ByteString                               -- ^ app root
                  -> (url -> Request -> RouteT url IO Response) -- ^ routing function
                  -> Application
-handleWaiRouteT_  toPathInfo fromPathInfo approot handler =
-   handleWai_ toPathInfo fromPathInfo approot (\toPathInfo' url request -> unRouteT (handler url request) toPathInfo')
+handleWaiRouteT_  toPathInfo fromPathInfo approot handler = \request respond ->
+   handleWai_ toPathInfo fromPathInfo approot (\toPathInfo' url request respond -> respond =<< unRouteT (handler url request) toPathInfo') request respond
 
 -- | convert a 'RouteT' based routing function into an 'Application' using 'PathInfo' to do the url conversion
 handleWaiRouteT :: (PathInfo url) =>
