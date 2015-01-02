@@ -19,6 +19,6 @@ Library
         Exposed-Modules:  Web.Routes.XMLGenT
 
 source-repository head
-    type:     darcs
+    type:     git
+    location: https://github.com/Happstack/web-routes.git
     subdir:   web-routes-hsp
-    location: http://hub.darcs.net/stepcut/web-routes
