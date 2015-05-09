@@ -31,6 +31,9 @@ import Control.Applicative ((<$>), (<*))
 import Control.Monad (msum)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as B
+import Data.Int
+import Data.Fixed
+import Data.Word
 import Data.List as List (stripPrefix, tails)
 import Data.Text as Text (Text, pack, unpack, null, tails, stripPrefix)
 import Data.Text.Encoding (decodeUtf8)
@@ -320,23 +323,65 @@ instance PathInfo [String] where
   toPathSegments = id . map pack
   fromPathSegments = many (unpack <$> anySegment)
 
+{-# INLINE only #-}
+only :: (Text -> Either e (a, Text)) -> Text -> Maybe a
+only f text = 
+  case f text of
+    Right (n, r) | Text.null r -> Just n
+    _                          -> Nothing
+
+{-# INLINE int #-}
+int :: Integral a => label -> URLParser a
+int s = pToken (const s) (only (signed decimal))
+
+{-# INLINE uint #-}
+uint :: Integral a => label -> URLParser a
+uint s = pToken (const s) (only decimal)
+
+{-# INLINE frac #-}
+frac :: Fractional a => label -> URLParser a
+frac s = pToken (const s) (only )
+
 instance PathInfo Int where
-  toPathSegments i = [pack $ show i]
-  fromPathSegments = pToken (const "Int") checkInt
-   where checkInt txt =
-           case signed decimal txt of
-             (Left e) -> Nothing
-             (Right (n, r))
-                 | Text.null r -> Just n
-                 | otherwise -> Nothing
+  toPathSegments i = [pack (show i)]
+  fromPathSegments = int "Int"
 
 instance PathInfo Integer where
-  toPathSegments i = [pack $ show i]
-  fromPathSegments = pToken (const "Integer") checkInt
-   where checkInt txt =
-           case signed decimal txt of
-             (Left e) -> Nothing
-             (Right (n, r))
-                 | Text.null r -> Just n
-                 | otherwise -> Nothing
+  toPathSegments i = [pack (show i)]
+  fromPathSegments = int "Integer"
 
+instance PathInfo Int64 where
+  toPathSegments i = [pack (show i)]
+  fromPathSegments = int "Int64"
+
+instance PathInfo Int32 where
+  toPathSegments i = [pack (show i)]
+  fromPathSegments = int "Int32"
+
+instance PathInfo Int16 where
+  toPathSegments i = [pack (show i)]
+  fromPathSegments = int "Int16"
+
+instance PathInfo Int8 where
+  toPathSegments i = [pack (show i)]
+  fromPathSegments = int "Int8"
+
+instance PathInfo Word where
+  toPathSegments i = [pack (show i)]
+  fromPathSegments = uint "Word"
+
+instance PathInfo Word64 where
+  toPathSegments i = [pack (show i)]
+  fromPathSegments = uint "Word64"
+
+instance PathInfo Word32 where
+  toPathSegments i = [pack (show i)]
+  fromPathSegments = uint "Word32"
+
+instance PathInfo Word16 where
+  toPathSegments i = [pack (show i)]
+  fromPathSegments = uint "Word16"
+
+instance PathInfo Word8 where
+  toPathSegments i = [pack (show i)]
+  fromPathSegments = uint "Word8"
