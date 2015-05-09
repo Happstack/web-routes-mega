@@ -338,10 +338,6 @@ int s = pToken (const s) (only (signed decimal))
 uint :: Integral a => label -> URLParser a
 uint s = pToken (const s) (only decimal)
 
-{-# INLINE frac #-}
-frac :: Fractional a => label -> URLParser a
-frac s = pToken (const s) (only )
-
 instance PathInfo Int where
   toPathSegments i = [pack (show i)]
   fromPathSegments = int "Int"
