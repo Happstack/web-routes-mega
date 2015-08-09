@@ -1,11 +1,3 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
-<head>
-<title>404 No More!, Part I</title>
-<link type='text/css' rel='stylesheet' href='hscolour.css' />
-</head>
-<body>
-
 <h1>404 No More!</h1> 
  (<i><a href='./SimpleSite2.html'>Part II</a> and <a href='./SimpleSite3.html'>Part III</a></i>)
  <p>This post shows a simple way to use the Reader Monad Transformer to:</p>
@@ -192,6 +184,3 @@ adapted to use <code>Network.CGI</code>.
 >        putStrLn "running..."
 >        waitForTermination
 >        killThread tid
-
-</body>
-</html>

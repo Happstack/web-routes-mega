@@ -1,10 +1,3 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
-<head>
-<title>404 No More!, Part II</title>
-<link type='text/css' rel='stylesheet' href='hscolour.css' />
-</head>
-<body>
 First some header stuff.
 
 > {-# LANGUAGE DeriveDataTypeable, FlexibleContexts #-}
@@ -275,6 +268,3 @@ The remaining code just wraps the example up into a working example.
 >        waitForTermination
 >        killThread tid
 >
-
-</body>
-</html>
