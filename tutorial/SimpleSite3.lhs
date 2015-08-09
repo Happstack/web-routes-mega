@@ -35,7 +35,7 @@ First some header stuff.
 
 > type LinkT link display m a = ReaderT (link -> display) m a
 
- <p>The <code>LinkT</code> type has for parameters:</p>
+ <p>The <code>LinkT</code> type has four parameters:</p>
  <dl>
    <dt><code>link</code></dt><dd>Our navigation type<dd>
    <dt><code>display</code></dt><dd>The type of a link which has been converted to a showable form</dd>

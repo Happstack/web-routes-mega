@@ -135,7 +135,7 @@ Failed, modules loaded: none.</pre>
  <code>nestLink YourGallery</code>. The <code>gallery</code> library
  itself needs no additional adjustments.</p>
 
- <p>Additionally, let's say we forgegt the nestLink
+ <p>Additionally, let's say we forget the nestLink
  in the last alternative and instead write:</p>
 
  <pre>ourSite (YourGallery g) =
@@ -184,7 +184,7 @@ Failed, modules loaded: none.</pre>
  
  <pre>ourSite :: OurSite -> LinkM OurSite Html</pre>
 
- <p>One way to enforce this required is to code it into the type which
+ <p>One way to enforce this requirement is to code it into the type which
  represents our site:</p>
 
 >
