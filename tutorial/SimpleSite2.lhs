@@ -1,10 +1,3 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
-<head>
-<title>404 No More!, Part II</title>
-<link type='text/css' rel='stylesheet' href='hscolour.css' />
-</head>
-<body>
 First some header stuff.
 
 > {-# LANGUAGE DeriveDataTypeable, FlexibleContexts #-}
@@ -142,7 +135,7 @@ Failed, modules loaded: none.</pre>
  <code>nestLink YourGallery</code>. The <code>gallery</code> library
  itself needs no additional adjustments.</p>
 
- <p>Additionally, let's say we forgegt the nestLink
+ <p>Additionally, let's say we forget the nestLink
  in the last alternative and instead write:</p>
 
  <pre>ourSite (YourGallery g) =
@@ -191,7 +184,7 @@ Failed, modules loaded: none.</pre>
  
  <pre>ourSite :: OurSite -> LinkM OurSite Html</pre>
 
- <p>One way to enforce this required is to code it into the type which
+ <p>One way to enforce this requirement is to code it into the type which
  represents our site:</p>
 
 >
@@ -275,6 +268,3 @@ The remaining code just wraps the example up into a working example.
 >        waitForTermination
 >        killThread tid
 >
-
-</body>
-</html>

@@ -1,10 +1,3 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
-<head>
-<title>404 No More!, Part III</title>
-<link type='text/css' rel='stylesheet' href='hscolour.css' />
-</head>
-<body>
 First some header stuff.
 
 > {-# LANGUAGE DeriveDataTypeable, FlexibleContexts #-}
@@ -42,14 +35,14 @@ First some header stuff.
 
 > type LinkT link display m a = ReaderT (link -> display) m a
 
- <p>The <code>LinkT</code> type has for parameters:</p>
+ <p>The <code>LinkT</code> type has four parameters:</p>
  <dl>
    <dt><code>link</code></dt><dd>Our navigation type<dd>
    <dt><code>display</code></dt><dd>The type of a link which has been converted to a showable form</dd>
    <dt><code>m</code></dt><dd>An arbitrary monad we wish to transform.</dd>
    <dt><code>a</code></dt><dd>The return type</dd>
- </dl>                          
-    
+ </dl>
+
  <p>The <code>showLink</code> and <code>nestLink</code> functions are
  the same as before, but with a slightly different type signatures</p>
 
@@ -60,7 +53,7 @@ First some header stuff.
 
 > nestLink :: (link2 -> link1) -> LinkT link2 display m a -> LinkT link1 display m a
 > nestLink b = withReaderT (. b)
- 
+
  <h2>Prettier Links</h2
 
  <p>The links we generated before were pretty ugly. They looked
@@ -88,7 +81,7 @@ First some header stuff.
 > prettyFormatLink t =
 >     let args = gmapQ prettyFormatLink t
 >     in encode $
->     "/" ++ (replicate (length args) '!') 
+>     "/" ++ (replicate (length args) '!')
 >         ++ showConstr (toConstr t)
 >         ++ concat args
 >     where
@@ -98,7 +91,7 @@ First some header stuff.
 > prettyParseLink str =
 >     rewrite str
 >     where
->       rewrite s = 
+>       rewrite s =
 >           case gread $ toParens (evalState toTree (map args (words (map toSpace (decode s)))) ) of
 >             [(v, "")] -> Just v
 >             _ -> Nothing
@@ -108,7 +101,7 @@ First some header stuff.
 >           let (pluses, rest) = span (== '!') argStr
 >           in (length pluses, rest)
 >       toTree :: State [(Int, String)] (Tree String)
->       toTree = 
+>       toTree =
 >           do (argCount, constr) <- next
 >              args <- replicateM argCount toTree
 >              return $ Node constr args
@@ -116,13 +109,13 @@ First some header stuff.
 >           "(" ++ constr ++ (concatMap ((" " ++) . toParens) args) ++ ")"
 >       decode = unEscapeString
 >       next :: (MonadState [s] m) => m s
->       next = 
+>       next =
 >           do (x:xs) <- get
 >              put xs
 >              return x
 
  <h2>What's Left To Do?</h2>
- 
+
  <p>The current implementation only looks at the path portion of the
  URL. We have not considered differentiating between GET and POST
  requests, etc. This can be done in the site code -- but perhaps it
@@ -131,18 +124,18 @@ First some header stuff.
 
  <p>link forwarding/migration</p>
 
- <h2>The rest of the example</h2>                      
+ <h2>The rest of the example</h2>
 
  <p>We can now convert our example to use the new type.</p>
 
-> data OurSite 
+> data OurSite
 >     = HomePage
 >     | MyGallery Gallery
 >     | YourGallery Gallery
 >       deriving (Data, Typeable)
 
 > data Gallery
->    = Thumbnails 
+>    = Thumbnails
 >    | ShowImage Int Size
 >    deriving (Data, Typeable)
 
@@ -153,19 +146,19 @@ First some header stuff.
 
 > -- dummy implementation for didactic purposes
 > gallery :: (Monad m) => String -> Gallery -> LinkT Gallery Link m Html
-> gallery username Thumbnails = 
+> gallery username Thumbnails =
 >     do img1 <- showLink (ShowImage 1 Full)
->        return $ pageTemplate 
->            ((toHtml $ "Showing " ++ username ++ "'s gallery thumbnails.") +++ 
+>        return $ pageTemplate
+>            ((toHtml $ "Showing " ++ username ++ "'s gallery thumbnails.") +++
 >             br +++
 >             (anchor (toHtml "image 1") ! [href img1]))
-> gallery username (ShowImage i s) = 
->     return $ pageTemplate (toHtml $ "showing " ++ username ++ "'s image number " ++ 
+> gallery username (ShowImage i s) =
+>     return $ pageTemplate (toHtml $ "showing " ++ username ++ "'s image number " ++
 >                            show i ++ " at " ++ show s ++ " size.")
 
 > pageTemplate :: Html -> Html
 > pageTemplate thebody =
->     ((header 
+>     ((header
 >       (thetitle (toHtml "Simple Site"))) +++
 >      (body thebody))
 
@@ -176,7 +169,7 @@ First some header stuff.
 >        yourGallery <- nestLink YourGallery $ showLink Thumbnails
 >        return $ pageTemplate (toHtml "go to " +++ br +++
 >                          (anchor (toHtml "my gallery")) ! [href myGallery ]  +++ br +++
->                          (anchor (toHtml "your gallery")) ! [href yourGallery ] 
+>                          (anchor (toHtml "your gallery")) ! [href yourGallery ]
 >                         )
 > ourSite (MyGallery g) =
 >     nestLink MyGallery $ gallery "Jeremy Shaw" g
@@ -189,13 +182,13 @@ First some header stuff.
 >     = Site { handleLink  :: link -> LinkT link url m a
 >            , defaultPage :: link
 >            , formatLink  :: link -> url
->            , parseLink   :: url -> Maybe link 
+>            , parseLink   :: url -> Maybe link
 >            }
 
 
 > -- runSite :: (Monad m) => Site link Link m a -> Link -> m (Maybe a)
 > runSite site linkStr =
->     let mLink = 
+>     let mLink =
 >             case linkStr of
 >                  "" -> Just (defaultPage site)
 >                  _ -> (parseLink site) linkStr
@@ -213,7 +206,7 @@ First some header stuff.
 >          , parseLink = prettyParseLink -- readLink
 >          }
 
-> -- * Boilerplate code for running ourSite via HAppS. 
+> -- * Boilerplate code for running ourSite via HAppS.
 > -- Easily adaptable to Network.CGI, etc.
 
 > implURL :: (ToMessage a) => Site link Link (WebT IO) a -> [ServerPartT IO Response]
@@ -226,12 +219,9 @@ First some header stuff.
 >     ]
 
 > main :: IO ()
-> main = 
+> main =
 >     do tid <- forkIO $ simpleHTTP nullConf (implURL ourSiteSpec)
 >        putStrLn "running..."
 >        waitForTermination
 >        killThread tid
 >
-
-</body>
-</html>

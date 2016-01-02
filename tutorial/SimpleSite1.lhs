@@ -1,12 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
-<head>
-<title>404 No More!, Part I</title>
-<link type='text/css' rel='stylesheet' href='hscolour.css' />
-</head>
-<body>
-
-<h1>404 No More!</h1> 
+<h1>404 No More!</h1>
  (<i><a href='./SimpleSite2.html'>Part II</a> and <a href='./SimpleSite3.html'>Part III</a></i>)
  <p>This post shows a simple way to use the Reader Monad Transformer to:</p>
     <ol>
@@ -24,7 +16,7 @@
  other problems, but I am focusing on hyperlinks, because that is what
  is immediately useful to me. If you think up some other pratical
  uses, let me know and I will mention them.</p>
-      
+
 First some header stuff.
 
 > {-# LANGUAGE DeriveDataTypeable, FlexibleContexts #-}
@@ -53,7 +45,7 @@ First some header stuff.
     We can represent navigating to those pages with the following types:
 
 > data Gallery
->    = Thumbnails 
+>    = Thumbnails
 >    | ShowImage Int Size
 >    deriving (Read, Show)
 
@@ -81,7 +73,7 @@ that they generate prettier and more user friendly links.</p>
 > type Link = String
 
 > showLink :: (Show a) => a -> Link
-> showLink = escapeURIString isUnescapedInURI . show 
+> showLink = escapeURIString isUnescapedInURI . show
 
 > readLink :: (Read a) => Link -> Maybe a
 > readLink = readM . unEscapeString
@@ -97,26 +89,26 @@ that they generate prettier and more user friendly links.</p>
 
 > -- dummy implementation for didactic purposes
 > gallery :: String -> Gallery -> Html
-> gallery username Thumbnails = 
+> gallery username Thumbnails =
 >     let img1 = showLink (ShowImage 1 Full)
->     in pageTemplate 
->            ((toHtml $ "Showing " ++ username ++ "'s gallery thumbnails.") +++ 
+>     in pageTemplate
+>            ((toHtml $ "Showing " ++ username ++ "'s gallery thumbnails.") +++
 >             br +++
 >             (anchor (toHtml "image 1") ! [href img1]))
-> gallery username (ShowImage i s) = 
->     pageTemplate (toHtml $ "showing " ++ username ++ "'s image number " ++ 
+> gallery username (ShowImage i s) =
+>     pageTemplate (toHtml $ "showing " ++ username ++ "'s image number " ++
 >                   show i ++ " at " ++ show s ++ " size.")
 
 > pageTemplate :: Html -> Html
 > pageTemplate thebody =
->     ((header 
+>     ((header
 >       (thetitle (toHtml "Simple Site"))) +++
 >      (body thebody))
 
 <h2>Conclusion</h2>
 <h3>The Good</h3>
 <p>There are two good things to note about <code>gallery</code>.</p>
-<ol> 
+<ol>
  <li>Looking up the page associated with the incoming link uses
 standard Haskell pattern matching. Therefore, the compiler can warn
 use if we have incomplete pattern matches.</li>
@@ -139,7 +131,7 @@ Additionally, if we try to use the <code>Gallery</code> library in two
 places in a larger site, the generated URIs will be wrong and
 non-unique. For example, imagine if we had a site like:
 
-> data OurSite 
+> data OurSite
 >     = HomePage
 >     | MyGallery Gallery
 >     | YourGallery Gallery
@@ -161,7 +153,7 @@ adapted to use <code>Network.CGI</code>.
 
 > runSite :: (Read link) => Site link a -> Link -> Maybe a
 > runSite site linkStr =
->     let mLink = 
+>     let mLink =
 >             case linkStr of
 >                  "" -> Just (defaultPage site)
 >                  _ -> readLink linkStr
@@ -174,7 +166,7 @@ adapted to use <code>Network.CGI</code>.
 >          , defaultPage = Thumbnails
 >          }
 
-> -- * Boilerplate code for running simpleSite via HAppS. 
+> -- * Boilerplate code for running simpleSite via HAppS.
 > -- Easily adaptable to Network.CGI, etc.
 
 > implURL :: [ServerPartT IO Response]
@@ -187,11 +179,8 @@ adapted to use <code>Network.CGI</code>.
 >     ]
 
 > main :: IO ()
-> main = 
+> main =
 >     do tid <- forkIO $ simpleHTTP nullConf implURL
 >        putStrLn "running..."
 >        waitForTermination
 >        killThread tid
-
-</body>
-</html>
